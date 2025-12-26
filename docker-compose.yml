@@ -1,0 +1,15 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: thinkjava
+      POSTGRES_PASSWORD: thinkjava
+      POSTGRES_DB: thinkjava
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d
+      - ./database/seed:/docker-entrypoint-seed.d

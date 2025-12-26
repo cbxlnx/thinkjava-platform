@@ -1,0 +1,97 @@
+<div class="auth-page">
+
+  <!-- BRAND ABOVE CARD -->
+  <header class="page-brand">
+    <div class="brand">
+      <div class="brand-icon">{{ '{ }' }}</div>
+      <div class="brand-text">
+        <div class="brand-name">ThinkJava</div>
+        <div class="brand-tagline">AI-Powered Adaptive Java Learning</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- REGISTER CARD -->
+  <div class="auth-card">
+
+    <div class="auth-title">
+      <h1>Welcome to ThinkJava</h1>
+      <p>Start your personalized Java learning journey</p>
+    </div>
+
+    <!-- TOGGLE -->
+    <div class="auth-toggle">
+      <a class="toggle-btn" routerLink="/login">Login</a>
+      <a class="toggle-btn active" routerLink="/register">Sign Up</a>
+    </div>
+
+    <!-- FORM -->
+    <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
+
+      <label class="field">
+        <span>Email</span>
+        <input
+          type="email"
+          placeholder="your.email@example.com"
+          formControlName="email"
+        />
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input
+          type="password"
+          placeholder="Create a password"
+          formControlName="password"
+        />
+      </label>
+
+      <label class="field">
+        <span>Confirm Password</span>
+        <input
+          type="password"
+          placeholder="Confirm your password"
+          formControlName="confirmPassword"
+        />
+      </label>
+
+      <button
+        class="primary-btn"
+        type="submit"
+        [disabled]="form.invalid"
+      >
+        Create Account &amp; Take Diagnostic Quiz
+        <span class="arrow">→</span>
+      </button>
+
+      <div class="divider">
+        <span>OR</span>
+      </div>
+
+      <button class="secondary-btn" type="button">
+        <span class="g-dot">G</span> Continue with Google
+      </button>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+
+      <div class="auth-row">
+        <a class="link" routerLink="/login">Back to login</a>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- FOOTER BELOW CARD -->
+  <footer class="page-footer">
+    <div class="copyright">
+      © 2025 ThinkJava — Adaptive Learning Platform
+    </div>
+
+    <div class="chips">
+      <span class="chip">AI-Powered Learning</span>
+      <span class="chip">Personalized Path</span>
+      <span class="chip">Instant Feedback</span>
+    </div>
+  </footer>
+
+</div>

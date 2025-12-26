@@ -1,0 +1,114 @@
+# ==================================================
+# General / Docs
+# ==================================================
+# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files
+
+# ==================================================
+# Frontend (Angular)
+# ==================================================
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node (any level)
+node_modules/
+**/node_modules/
+
+# Maven (any level)
+target/
+**/target/
+
+# Angular/Vite cache (any level)
+.angular/
+**/.angular/
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+
+# Angular cache
+/.angular/cache
+
+# Coverage / test artifacts
+/coverage
+testem.log
+__screenshots__/
+
+# ==================================================
+# Backend (Spring Boot / Maven)
+# ==================================================
+
+# Maven
+/target
+
+# Logs
+*.log
+
+# Local Spring configs (DO NOT COMMIT)
+application-local.properties
+application-local.yml
+application-dev.properties
+application-prod.properties
+
+# ==================================================
+# Environment variables / Secrets
+# ==================================================
+
+.env
+.env.*
+*.key
+*.pem
+
+# ==================================================
+# Docker
+# ==================================================
+
+# Docker volumes / postgres data
+postgres-data/
+pgdata/
+**/postgres-data/
+**/pgdata/
+
+# ==================================================
+# IDEs and editors
+# ==================================================
+
+# IntelliJ / Eclipse
+.idea/
+.project
+.classpath
+.settings/
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# Other editors
+.c9/
+*.launch
+*.sublime-workspace
+
+# ==================================================
+# Miscellaneous
+# ==================================================
+
+.sass-cache/
+.connect.lock
+/libpeerconnection.log
+/typings
+
+# ==================================================
+# System files
+# ==================================================
+
+.DS_Store
+Thumbs.db
