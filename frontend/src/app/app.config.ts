@@ -15,10 +15,10 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
 
-    // 🔐 Routing
+    // routing
     provideRouter(routes),
 
-    // 🌐 HTTP + JWT interceptor
+    // HTTP + JWT interceptor
     provideHttpClient(withInterceptors([authInterceptor])),
   ],
 };
