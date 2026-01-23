@@ -20,7 +20,7 @@ export class AppComponent implements OnInit {
     this.http.get('http://localhost:8080/api/ping', { responseType: 'text' })
       .subscribe({
         next: res => this.message = res,
-        error: () => this.message = '❌ Backend not reachable'
+        error: () => this.message = 'Backend not reachable'
       });
   }
 }
