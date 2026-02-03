@@ -1,0 +1,209 @@
+<div class="diag-shell"
+     [class.vcenter]="step === 'INTRO' || step === 'QUIZ'"
+     [class.result]="step === 'RESULT'">
+
+  <div class="diag-grid single">
+
+    <!-- INTRO -->
+    <section class="card intro" *ngIf="step === 'INTRO'">
+      <div class="icon-badge">
+        <span class="icon">🧠</span>
+      </div>
+
+      <h2 class="title">Welcome to Your Java Assessment</h2>
+      <p class="subtitle">Let's discover your current Java knowledge level.</p>
+
+      <div class="hint-box">
+        <span class="spark">✨</span>
+        <div>
+          This quick assessment will help us create a
+          <b>personalized learning path</b> tailored to your current skill level.
+        </div>
+      </div>
+
+      <div class="expect">
+        <div class="expect-title">What to Expect:</div>
+
+        <ul class="expect-list">
+          <li><span class="dot"></span> {{ totalQuestionsPlanned }} carefully selected questions</li>
+          <li><span class="dot"></span> Multiple-choice format</li>
+          <li><span class="dot"></span> Questions range from beginner to advanced</li>
+          <li><span class="dot"></span> Takes approximately 5–7 minutes</li>
+        </ul>
+      </div>
+
+      <button class="btn primary full" (click)="start()">
+        Start Assessment 
+      </button>
+
+      <p class="fineprint">
+        Don’t worry! This is just to help us understand where to start.
+        You can always adjust your path later.
+      </p>
+    </section>
+
+    <!-- QUIZ -->
+    <section class="card quiz" *ngIf="step === 'QUIZ' && currentQuestion">
+      <div class="quiz-top">
+        <div class="q-meta">
+          <span class="small-icon">📓</span>
+          <span>Question {{ questionNumber }} of {{ totalQuestionsPlanned }}</span>
+        </div>
+
+        <span class="pill">{{ difficultyLabel }}</span>
+      </div>
+
+      <div class="progress">
+        <div class="progress-bar" [style.width.%]="progressPercent"></div>
+      </div>
+
+      <!-- CODE BLOCK -->
+      <div class="q-code" *ngIf="currentQuestion.prompt.includes(';') || currentQuestion.prompt.includes('{')">
+        <pre><code>{{ currentQuestion.prompt }}</code></pre>
+      </div>
+
+      <!-- NORMAL TEXT QUESTION -->
+      <h3 class="q-title" *ngIf="!(currentQuestion.prompt.includes(';') || currentQuestion.prompt.includes('{'))">
+        {{ currentQuestion.prompt }}
+      </h3>
+
+      <div class="options">
+        <button class="option" type="button" (click)="pick('A')" [class.selected]="selected === 'A'">
+          <span class="radio" [class.on]="selected === 'A'"></span>
+          <span class="opt-text">{{ currentQuestion.optionA }}</span>
+        </button>
+
+        <button class="option" type="button" (click)="pick('B')" [class.selected]="selected === 'B'">
+          <span class="radio" [class.on]="selected === 'B'"></span>
+          <span class="opt-text">{{ currentQuestion.optionB }}</span>
+        </button>
+
+        <button class="option" type="button" (click)="pick('C')" [class.selected]="selected === 'C'">
+          <span class="radio" [class.on]="selected === 'C'"></span>
+          <span class="opt-text">{{ currentQuestion.optionC }}</span>
+        </button>
+
+        <button class="option" type="button" (click)="pick('D')" [class.selected]="selected === 'D'">
+          <span class="radio" [class.on]="selected === 'D'"></span>
+          <span class="opt-text">{{ currentQuestion.optionD }}</span>
+        </button>
+      </div>
+
+      <div class="quiz-footer">
+        <div class="footer-note" *ngIf="selected">Answer selected</div>
+        <div class="footer-note" *ngIf="!selected">&nbsp;</div>
+
+        <div class="footer-actions">
+          <button class="btn ghost" type="button" (click)="skipQuestion()">
+            I don’t know
+          </button>
+
+          <button class="btn primary" (click)="next()" [disabled]="!selected">
+            {{ isLastQuestion ? 'Finish' : 'Next Question' }} <span class="arrow">→</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <div *ngIf="step === 'RESULT'" class="result-shell">
+
+      <div class="result-title">
+        <h1>Assessment Complete!</h1>
+        <p>Your personalized Java learning path has been generated based on your results.</p>
+      </div>
+
+      <div class="result-card">
+        <div class="ring">
+          <svg viewBox="0 0 120 120" class="ring-svg">
+            <circle class="ring-bg" cx="60" cy="60" r="46"></circle>
+            <circle
+              class="ring-fg"
+              cx="60"
+              cy="60"
+              r="46"
+              [attr.stroke-dasharray]="289"
+              [attr.stroke-dashoffset]="289 - (289 * completionPercent) / 100"
+            ></circle>
+          </svg>
+
+          <div class="ring-center">
+            <div class="ring-num">{{ completionPercent }}%</div>
+            <div class="ring-sub">Estimated mastery</div>
+          </div>
+        </div>
+
+        <div class="level">
+          <div class="level-title">Your Java Level:</div>
+          <div class="level-row">
+            <span class="level-pill">{{ overallLevel }}</span>
+            <span class="level-arrow">↗</span>
+          </div>
+
+          <p class="level-desc">
+            Based on your answers, we’ll start you where it makes the most sense —
+            and adapt as you improve.
+          </p>
+
+          <div class="level-sep"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="columns">
+          <div class="col">
+            <div class="col-head-row">
+              <span class="head-icon good">✓</span>
+              <div class="col-head good">Strengths</div>
+            </div>
+
+            <div class="item good" *ngFor="let s of strengths">
+              <span class="item-icon good">✓</span>
+              <span>{{ s }}</span>
+            </div>
+
+            <div class="item muted" *ngIf="strengths.length === 0">
+              No strong areas yet
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="col-head-row">
+              <span class="head-icon warn">!</span>
+              <div class="col-head warn">Needs Improvement</div>
+            </div>
+
+            <div class="item warn" *ngFor="let n of needsImprovement">
+              <span class="item-icon warn">!</span>
+              <span>{{ n }}</span>
+            </div>
+
+            <div class="item muted" *ngIf="needsImprovement.length === 0">
+                Looks solid 
+            </div>
+
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" (click)="viewPath()">Start learning </button>
+          <button class="btn ghost" (click)="retake()">Retake assessment</button>
+        </div>
+      </div>
+
+      <div class="ai-card">
+        <div class="ai-icon">✦</div>
+        <div>
+          <div class="ai-title">AI Recommendation</div>
+          <div class="ai-text">
+            Start with <b>{{ resultJson?.startModule }}</b> to reinforce your weakest area first.
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">
+        Your learning path adapts as you progress. You can always adjust your goals and retake assessments later.
+      </div>
+    </div>
+  </div>
+</div>
