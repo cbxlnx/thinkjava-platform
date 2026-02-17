@@ -5,6 +5,7 @@ import com.thinkjava.platform.user.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -62,7 +63,12 @@ public class SecurityConfig {
       .authorizeHttpRequests(auth -> auth
         .requestMatchers("/api/diagnostic/**").authenticated()
         .requestMatchers("/api/learn/**").authenticated() 
-        .requestMatchers("/api/auth/**", "/api/ping").permitAll()   // public endpoints
+        .requestMatchers(
+            "/api/auth/**",
+            "/api/ping",
+            "/error",
+            "/"
+        ).permitAll()  // public endpoints
         .anyRequest().authenticated()                               // everything else requires JWT
       )
       .exceptionHandling(ex -> ex
