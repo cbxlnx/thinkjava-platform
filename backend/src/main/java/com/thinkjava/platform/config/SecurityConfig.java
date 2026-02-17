@@ -57,11 +57,12 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
-      .cors(c -> c.configurationSource(corsConfigurationSource()))
+      .cors(c -> {})
       .csrf(csrf -> csrf.disable())
       .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(auth -> auth
-        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+        .requestMatchers("/api/diagnostic/**").authenticated()
+        .requestMatchers("/api/learn/**").authenticated() 
         .requestMatchers(
             "/api/auth/**",
             "/api/ping",
@@ -82,15 +83,15 @@ public class SecurityConfig {
     return http.build();
   }
 
-  @Bean
-  public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration cfg = new CorsConfiguration();
-    cfg.setAllowedOrigins(List.of("http://localhost:4200"));
-    cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-    cfg.setAllowedHeaders(List.of("Authorization","Content-Type"));
-    cfg.setAllowCredentials(true);
-    UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
-    src.registerCorsConfiguration("/**", cfg);
-    return src;
-  }
+  // @Bean
+  // public CorsConfigurationSource corsConfigurationSource() {
+  //   CorsConfiguration cfg = new CorsConfiguration();
+  //   cfg.setAllowedOrigins(List.of("http://localhost:4200"));
+  //   cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+  //   cfg.setAllowedHeaders(List.of("Authorization","Content-Type"));
+  //   cfg.setAllowCredentials(true);
+  //   UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+  //   src.registerCorsConfiguration("/**", cfg);
+  //   return src;
+  // }
 }

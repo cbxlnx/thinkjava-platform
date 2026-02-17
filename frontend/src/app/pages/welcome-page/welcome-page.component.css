@@ -1,0 +1,123 @@
+/* Full page background */
+.welcome-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(124, 58, 237, 0.15), transparent 60%),
+    linear-gradient(180deg, #f6f3ff 0%, #f3efff 100%);
+}
+
+/* Card */
+.welcome-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 48px 36px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  box-shadow: 0 20px 60px rgba(17, 24, 39, 0.08);
+
+  text-align: center;
+}
+
+/* Logo block */
+.logo {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 12px;
+  border-radius: 14px;
+
+  display: grid;
+  place-items: center;
+
+  font-weight: 900;
+  font-size: 18px;
+
+  color: #6d28d9;
+  background: rgba(124, 58, 237, 0.10);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 16px;
+  color: #4c1d95;
+  margin-bottom: 24px;
+}
+
+/* Heading */
+h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sub {
+  margin: 8px 0 28px;
+  color: rgba(17, 24, 39, 0.6);
+  font-size: 14px;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Input */
+.input {
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  font-size: 14px;
+  outline: none;
+  transition: 0.15s ease;
+}
+
+.input:focus {
+  border-color: rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+}
+
+/* Button */
+.btn {
+  height: 46px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
+
+  background: linear-gradient(90deg, #7c3aed 0%, #6d28d9 100%);
+  box-shadow: 0 14px 30px rgba(124, 58, 237, 0.25);
+
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Error */
+.error {
+  font-size: 13px;
+  color: #b91c1c;
+  margin-top: 4px;
+}

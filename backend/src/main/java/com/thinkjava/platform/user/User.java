@@ -23,6 +23,9 @@ public class User implements UserDetails {
   @Column(nullable = false)
   private Instant createdAt = Instant.now();
 
+  @Column(name = "first_name")
+  private String firstName;
+  
   // UserDetails
   @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
   @Override public String getUsername() { return email; }
