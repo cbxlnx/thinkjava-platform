@@ -1,0 +1,130 @@
+<div class="wrap">
+  <div *ngIf="loading" class="card">
+    <div class="title">Loading your learning path...</div>
+    <div class="muted">Fetching lessons and progress.</div>
+  </div>
+
+  <div *ngIf="!loading && errorMsg" class="card">
+    <div class="title">Oops</div>
+    <div class="muted">{{ errorMsg }}</div>
+    <button class="btn" (click)="load()">Retry</button>
+  </div>
+
+  <ng-container *ngIf="!loading && !errorMsg">
+    <!-- Header -->
+    <div class="top">
+      <div>
+        <div class="title-row">
+          <div class="h1">Your Learning Path</div>
+          <div class="pill">{{ userLevel }} Learner</div>
+        </div>
+        <div class="muted">Based on your Java proficiency, continue your adaptive learning journey.</div>
+
+        <div class="search">
+          <span class="icon">🔎</span>
+          <input [(ngModel)]="search" placeholder="Search topics..." />
+        </div>
+
+        <div class="stats">
+          <div class="stat card mini">
+            <div class="statNum">{{ completedCount }}</div>
+            <div class="statLabel">Completed</div>
+          </div>
+          <div class="stat card mini">
+            <div class="statNum purple">{{ activeCount }}</div>
+            <div class="statLabel">Active</div>
+          </div>
+          <div class="stat card mini">
+            <div class="statNum gray">{{ upcomingCount }}</div>
+            <div class="statLabel">Upcoming</div>
+          </div>
+        </div>
+
+        <div class="chips">
+          <button class="chip" [class.active]="chip==='All'" (click)="setChip('All')">All</button>
+          <button class="chip" [class.active]="chip==='Beginner'" (click)="setChip('Beginner')">Beginner</button>
+          <button class="chip" [class.active]="chip==='Intermediate'" (click)="setChip('Intermediate')">Intermediate</button>
+          <button class="chip" [class.active]="chip==='Advanced'" (click)="setChip('Advanced')">Advanced</button>
+          <button class="chip" [class.active]="chip==='Completed'" (click)="setChip('Completed')">Completed</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed -->
+    <div class="sectionTitle">✅ Completed ({{ completedLessons.length }})</div>
+    <div class="muted small" *ngIf="completedLessons.length">Great progress! You’ve mastered {{ completedLessons.length }} topics.</div>
+    <div class="grid">
+      <div class="lessonCard card" *ngFor="let l of completedLessons" (click)="openLesson(l)">
+        <div class="row">
+          <div class="tag">{{ l.levelTag }}</div>
+          <div class="time">⏱ {{ l.estimatedMinutes || 0 }} min</div>
+        </div>
+
+        <div class="lessonTitle">{{ l.title }}</div>
+        <div class="lessonSub">{{ labelForCheckpoint(l.checkpoint) }}</div>
+
+        <div class="barRow">
+          <div class="barLabel">Mastery</div>
+          <div class="barValue">{{ l.masteryPercent }}%</div>
+        </div>
+        <div class="bar">
+          <div class="barFill" [style.width.%]="l.masteryPercent"></div>
+        </div>
+
+        <button class="btn wide">Review</button>
+      </div>
+    </div>
+
+    <!-- Active -->
+    <div class="sectionTitle">🟣 Active Learning ({{ activeLessons.length }})</div>
+    <div class="grid">
+      <div class="lessonCard card" *ngFor="let l of activeLessons" (click)="openLesson(l)">
+        <div class="row">
+          <div class="tag">{{ l.levelTag }}</div>
+          <div class="time">⏱ {{ l.estimatedMinutes || 0 }} min</div>
+        </div>
+
+        <div class="lessonTitle">{{ l.title }}</div>
+        <div class="lessonSub">{{ labelForCheckpoint(l.checkpoint) }}</div>
+
+        <div class="barRow">
+          <div class="barLabel">Mastery</div>
+          <div class="barValue">{{ l.masteryPercent }}%</div>
+        </div>
+        <div class="bar">
+          <div class="barFill" [style.width.%]="l.masteryPercent"></div>
+        </div>
+
+        <button class="btn primary wide">Continue</button>
+      </div>
+    </div>
+
+    <!-- Upcoming -->
+    <div class="sectionTitle">🔒 Upcoming Topics ({{ upcomingLessons.length }})</div>
+    <div class="muted small" *ngIf="upcomingLessons.length">
+      Complete your active lessons to unlock these topics.
+    </div>
+
+    <div class="grid">
+      <div class="lessonCard card" *ngFor="let l of upcomingLessons" [class.locked]="l.locked" (click)="openLesson(l)">
+        <div class="row">
+          <div class="tag">{{ l.levelTag }}</div>
+          <div class="time">⏱ {{ l.estimatedMinutes || 0 }} min</div>
+        </div>
+
+        <div class="lessonTitle">{{ l.title }}</div>
+        <div class="lessonSub">{{ labelForCheckpoint(l.checkpoint) }}</div>
+
+        <div class="barRow">
+          <div class="barLabel">Mastery</div>
+          <div class="barValue">{{ l.masteryPercent }}%</div>
+        </div>
+        <div class="bar">
+          <div class="barFill" [style.width.%]="l.masteryPercent"></div>
+        </div>
+
+        <button class="btn wide" [disabled]="l.locked">{{ l.locked ? 'Locked' : 'Start' }}</button>
+      </div>
+    </div>
+  </ng-container>
+</div>

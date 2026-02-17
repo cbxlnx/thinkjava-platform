@@ -1,0 +1,26 @@
+<div class="welcome-shell">
+  <div class="welcome-card">
+    <div class="logo">{{ '{' }} {{ '}' }}</div>
+    <div class="brand">ThinkJava</div>
+
+    <h1>Welcome</h1>
+    <p class="sub">What should we call you?</p>
+
+    <form class="form" [formGroup]="form" (ngSubmit)="save()">
+      <input
+        class="input"
+        type="text"
+        formControlName="firstName"
+        placeholder="First name"
+        maxlength="30"
+        autocomplete="given-name"
+      />
+
+      <button class="btn" type="submit" [disabled]="form.invalid || loading">
+        {{ loading ? 'Saving...' : 'Continue' }}
+      </button>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+    </form>
+  </div>
+</div>

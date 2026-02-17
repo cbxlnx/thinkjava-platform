@@ -1,30 +1,33 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { catchError, map, of } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { AuthService } from './auth.service';
 import { DiagnosticService } from '../diagnostic/diagnostic.service';
+import { UsersService } from '../users/users.service';
 
 export const authGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   const diagnostic = inject(DiagnosticService);
+  const users = inject(UsersService);
 
-  // not logged in => go login
-  if (!auth.isLoggedIn()) {
-    return router.parseUrl('/login');
-  }
+  if (!auth.isLoggedIn()) return router.parseUrl('/login');
 
-  // always allow opening diagnostic page if logged in (otherwise can deadlock)
-  if (state.url.startsWith('/diagnostic')) {
-    return true;
-  }
+  // allow opening onboarding pages if logged in
+  if (state.url.startsWith('/diagnostic') || state.url.startsWith('/welcome')) return true;
 
-  // for any other protected route (dashboard etc), require diagnostic completion
-  return diagnostic.getStatus().pipe(
-    map((s) => {
-      if (s.required) return router.parseUrl('/diagnostic');
-      return true;
+  // 1) enforce name
+  return users.me().pipe(
+    switchMap((me) => {
+      const firstName = (me.firstName ?? '').trim();
+      if (!firstName) return of(router.parseUrl('/welcome'));
+
+      // 2) enforce diagnostic 
+      return diagnostic.getStatus().pipe(
+        map((s) => (s.required ? router.parseUrl('/diagnostic') : true)),
+        catchError(() => of(router.parseUrl('/diagnostic')))
+      );
     }),
-    catchError(() => of(router.parseUrl('/diagnostic')))
+    catchError(() => of(router.parseUrl('/welcome')))
   );
 };
