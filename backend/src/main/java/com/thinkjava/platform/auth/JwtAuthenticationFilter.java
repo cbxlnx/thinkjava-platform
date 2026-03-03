@@ -56,8 +56,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authToken);
           });
-        } catch (Exception ignored) {
-          // Invalid/expired token -> leave unauthenticated
+        } catch (Exception e) {
+          SecurityContextHolder.clearContext();
+          System.out.println("JWT VALIDATION FAILED: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
       }
     }

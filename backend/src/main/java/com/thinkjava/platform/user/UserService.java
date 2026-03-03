@@ -11,7 +11,7 @@ public class UserService {
     this.repo = repo; this.encoder = encoder;
   }
   public User create(String email, String rawPassword){
-    if (repo.existsByEmail(email)) throw new IllegalArgumentException("Email already used");
+    if (repo.existsByEmail(email)) throw new EmailAlreadyUsedException();
     User u = new User(); u.setEmail(email); u.setPassword(encoder.encode(rawPassword));
     return repo.save(u);
   }

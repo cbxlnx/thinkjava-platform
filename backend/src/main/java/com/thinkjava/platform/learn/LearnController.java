@@ -6,6 +6,10 @@ import com.thinkjava.platform.learn.dto.LessonQuizSubmitRequest;
 import com.thinkjava.platform.learn.dto.LessonQuizSubmitResponse;
 import com.thinkjava.platform.learn.dto.LessonResponse;
 import com.thinkjava.platform.user.User;
+import com.thinkjava.platform.user.UserService;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +21,11 @@ import java.util.UUID;
 public class LearnController {
 
   private final LearnService learnService;
+  private final UserService userService;
 
-  public LearnController(LearnService learnService) {
+  public LearnController(LearnService learnService, UserService userService) {
     this.learnService = learnService;
+    this.userService = userService;
   }
 
   @GetMapping("/path")
@@ -42,7 +48,9 @@ public class LearnController {
   }
 
   @GetMapping("/lessons")
-    public AllLessonsResponse allLessons(@AuthenticationPrincipal User user) {
+    public AllLessonsResponse allLessons(@AuthenticationPrincipal(expression = "username") String email) {
+    if (email == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing/invalid token");
+    User user = userService.findByEmail(email).orElseThrow();
     return learnService.getAllLessons(user);
     }
 
