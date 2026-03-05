@@ -20,8 +20,9 @@ import com.thinkjava.platform.learn.progress.LessonProgress;
 import com.thinkjava.platform.learn.progress.LessonProgressRepository;
 import com.thinkjava.platform.learn.quiz.LessonQuizQuestion;
 import com.thinkjava.platform.learn.quiz.LessonQuizQuestionRepository;
-import com.thinkjava.platform.learn.section.LessonSection;
-import com.thinkjava.platform.learn.section.LessonSectionRepository;
+import com.thinkjava.platform.learn.section.LessonBlock;
+import com.thinkjava.platform.learn.section.LessonBlockRepository;
+import com.thinkjava.platform.learn.model.LessonBlockType;
 import com.thinkjava.platform.user.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 public class LearnService {
 
     private final LessonRepository lessonRepository;
-    private final LessonSectionRepository sectionRepository;
+    private final LessonBlockRepository blockRepository;
     private final LessonQuizQuestionRepository quizRepository;
     private final LessonProgressRepository progressRepository;
     private final MasteryRepository masteryRepository;
@@ -48,13 +49,14 @@ public class LearnService {
 
     public LearnService(
             LessonRepository lessonRepository,
-            LessonSectionRepository sectionRepository,
+            LessonBlockRepository blockRepository,
             LessonQuizQuestionRepository quizRepository,
             LessonProgressRepository progressRepository,
             MasteryRepository masteryRepository,
-            DiagnosticResultRepository diagnosticRepository) {
+            DiagnosticResultRepository diagnosticRepository
+    ) {
         this.lessonRepository = lessonRepository;
-        this.sectionRepository = sectionRepository;
+        this.blockRepository = blockRepository;
         this.quizRepository = quizRepository;
         this.progressRepository = progressRepository;
         this.masteryRepository = masteryRepository;
@@ -87,8 +89,7 @@ public class LearnService {
     }
 
     private Checkpoint toCheckpointSafe(String raw) {
-        if (raw == null)
-            return Checkpoint.fundamentals;
+        if (raw == null) return Checkpoint.fundamentals;
         try {
             return Checkpoint.valueOf(raw.trim());
         } catch (Exception e) {
@@ -108,11 +109,11 @@ public class LearnService {
                 .collect(Collectors.toSet());
 
         List<Checkpoint> order = List.of(
-                Checkpoint.fundamentals, Checkpoint.loops, Checkpoint.arrays, Checkpoint.methods, Checkpoint.oop);
+                Checkpoint.fundamentals, Checkpoint.loops, Checkpoint.arrays, Checkpoint.methods, Checkpoint.oop
+        );
 
         int startIdx = order.indexOf(start);
-        if (startIdx < 0)
-            startIdx = 0;
+        if (startIdx < 0) startIdx = 0;
 
         for (int i = startIdx; i < order.size(); i++) {
             Checkpoint cp = order.get(i);
@@ -123,19 +124,16 @@ public class LearnService {
                     .sorted(Comparator.comparingInt(Lesson::getOrderIndex))
                     .toList();
 
-            if (cpLessons.isEmpty())
-                continue;
+            if (cpLessons.isEmpty()) continue;
 
             Optional<Lesson> firstIncomplete = cpLessons.stream()
                     .filter(l -> !completedLessonIds.contains(l.getId()))
                     .findFirst();
 
-            if (firstIncomplete.isPresent())
-                return firstIncomplete.get().getId();
+            if (firstIncomplete.isPresent()) return firstIncomplete.get().getId();
 
             // all completed: move forward only if mastery is high
-            if (mastery >= 0.80)
-                continue;
+            if (mastery >= 0.80) continue;
 
             // mastery not high -> suggest last lesson for review
             return cpLessons.get(cpLessons.size() - 1).getId();
@@ -153,15 +151,21 @@ public class LearnService {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
 
-        List<LessonSection> sectionEntities = sectionRepository.findByLessonIdOrderBySectionOrderAsc(lessonId);
-        List<LessonResponse.SectionDto> sections = sectionEntities.stream()
-                .map(s -> new LessonResponse.SectionDto(s.getSectionOrder(), s.getMarkdown()))
+        // Load blocks ordered by section_order (mapped as orderIndex in LessonBlock)
+        List<LessonBlock> blocks = blockRepository.findByLessonIdOrderByOrderIndexAsc(lessonId);
+
+        List<LessonResponse.SectionDto> sections = blocks.stream()
+                .filter(b -> b.getType() == null || b.getType() == LessonBlockType.MARKDOWN)
+                .map(b -> new LessonResponse.SectionDto(b.getOrderIndex(), b.getMarkdown()))
                 .toList();
 
         List<LessonQuizQuestion> quizEntities = quizRepository.findByLessonIdOrderByDifficultyAsc(lessonId);
         List<LessonResponse.QuizQuestionDto> quizQuestions = quizEntities.stream()
-                .map(q -> new LessonResponse.QuizQuestionDto(q.getId(), q.getPrompt(),
-                        parseOptions(q.getOptionsJson())))
+                .map(q -> new LessonResponse.QuizQuestionDto(
+                        q.getId(),
+                        q.getPrompt(),
+                        parseOptions(q.getOptionsJson())
+                ))
                 .toList();
 
         upsertInProgress(user, lesson);
@@ -172,9 +176,11 @@ public class LearnService {
                         lesson.getCheckpoint(),
                         lesson.getTitle(),
                         lesson.getOrderIndex(),
-                        lesson.getEstimatedMinutes()),
+                        lesson.getEstimatedMinutes()
+                ),
                 sections,
-                new LessonResponse.QuizDto(quizQuestions));
+                new LessonResponse.QuizDto(quizQuestions)
+        );
     }
 
     private void upsertInProgress(User user, Lesson lesson) {
@@ -184,8 +190,7 @@ public class LearnService {
         p.setUser(user);
         p.setLesson(lesson);
 
-        if (p.getStatus() == null)
-            p.setStatus(LessonStatus.in_progress);
+        if (p.getStatus() == null) p.setStatus(LessonStatus.in_progress);
 
         p.setLastSeenAt(Instant.now());
         progressRepository.save(p);
@@ -193,8 +198,7 @@ public class LearnService {
 
     private List<String> parseOptions(String optionsJson) {
         try {
-            return objectMapper.readValue(optionsJson, new TypeReference<List<String>>() {
-            });
+            return objectMapper.readValue(optionsJson, new TypeReference<List<String>>() {});
         } catch (Exception e) {
             return List.of();
         }
@@ -219,8 +223,7 @@ public class LearnService {
         for (LessonQuizQuestion q : questions) {
             String userAnswer = answers.get(q.getId());
             String correctAnswer = parseCorrect(q.getCorrectJson());
-            if (userAnswer != null && userAnswer.equals(correctAnswer))
-                correct++;
+            if (userAnswer != null && userAnswer.equals(correctAnswer)) correct++;
         }
 
         double score = (double) correct / questions.size();
@@ -234,10 +237,8 @@ public class LearnService {
         p.setLastSeenAt(Instant.now());
         p.setBestQuizScore(p.getBestQuizScore() == null ? score : Math.max(p.getBestQuizScore(), score));
 
-        if (passed)
-            p.setStatus(LessonStatus.completed);
-        else if (p.getStatus() == null)
-            p.setStatus(LessonStatus.in_progress);
+        if (passed) p.setStatus(LessonStatus.completed);
+        else if (p.getStatus() == null) p.setStatus(LessonStatus.in_progress);
 
         progressRepository.save(p);
 
@@ -264,7 +265,6 @@ public class LearnService {
     // MASTERY UPDATE
     // ---------------------------------------------------------
     private double updateMastery(User user, Checkpoint checkpoint, double score) {
-        // IMPORTANT: repository uses User, not userId
         Mastery m = masteryRepository.findByUserAndCheckpoint(user, checkpoint)
                 .orElseGet(Mastery::new);
 
@@ -291,11 +291,10 @@ public class LearnService {
     // BOOTSTRAP mastery from DiagnosticResult (first time only)
     // ---------------------------------------------------------
     private void ensureMasteryBootstrapped(User user) {
-        if (!masteryRepository.findByUser(user).isEmpty())
-            return;
+        if (!masteryRepository.findByUser(user).isEmpty()) return;
 
         DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Diagnostic not completed"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Diagnostic not completed"));
 
         Instant now = Instant.now();
 
@@ -316,8 +315,7 @@ public class LearnService {
     }
 
     private double mapLevel(String level) {
-        if (level == null)
-            return 0.10;
+        if (level == null) return 0.10;
         return switch (level) {
             case "Strong" -> 0.85;
             case "Medium" -> 0.60;
@@ -327,11 +325,13 @@ public class LearnService {
         };
     }
 
+    // ---------------------------------------------------------
+    // ALL LESSONS
+    // ---------------------------------------------------------
     @Transactional
     public AllLessonsResponse getAllLessons(User user) {
         ensureMasteryBootstrapped(user);
 
-        // compute userLevel from mastery avg
         Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user)
                 .stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
@@ -367,7 +367,8 @@ public class LearnService {
                     levelTag,
                     status,
                     masteryPercent,
-                    locked);
+                    locked
+            );
         }).toList();
 
         return new AllLessonsResponse(userLevel, out);

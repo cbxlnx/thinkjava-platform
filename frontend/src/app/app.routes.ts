@@ -1,21 +1,56 @@
 import { Routes } from '@angular/router';
-import { LoginPageComponent } from './pages/login-page/login-page.component';
-import { RegisterPageComponent } from './pages/register-page/register-page.component';
-import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page.component';
-import { DiagnosticPageComponent } from './pages/diagnostic-page/diagnostic-page.component';
+import { AppLayoutComponent } from './layout/app-layout/app-layout.component';
 import { authGuard } from './core/auth/auth.guard';
-import { diagnosticRedirectGuard } from './core/diagnostic/diagnostic-redirect.guard';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginPageComponent },
-  { path: 'register', component: RegisterPageComponent },
+  // AUTH / DIAGNOSTIC (NO NAVBAR)
+  {
+    path: 'login',
+    loadComponent: () => import('./pages/login-page/login-page.component')
+      .then(m => m.LoginPageComponent),
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./pages/register-page/register-page.component')
+      .then(m => m.RegisterPageComponent),
+  },
+  {
+    path: 'diagnostic',
+    loadComponent: () => import('./pages/diagnostic-page/diagnostic-page.component')
+      .then(m => m.DiagnosticPageComponent),
+  },
+  {
+    path: 'welcome',
+    loadComponent: () => import('./pages/welcome-page/welcome-page.component')
+        .then(m => m.WelcomePageComponent),
+  },
 
-  // diagnostic page should only require auth
-  { path: 'diagnostic', component: DiagnosticPageComponent, canActivate: [authGuard] },
-
-  // dashboard requires auth and the diagnostic redirect guard
-  { path: 'dashboard', component: DashboardPageComponent, canActivate: [authGuard, diagnosticRedirectGuard] },
-
-  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
-  { path: '**', redirectTo: 'dashboard' },
+  // APP (WITH NAVBAR) - PROTECTED
+  {
+    path: '',
+    component: AppLayoutComponent,
+    canActivateChild: [authGuard],  
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./pages/dashboard-page/dashboard-page.component')
+          .then(m => m.DashboardPageComponent),
+      },
+      {
+        path: 'learn',
+        loadComponent: () => import('./pages/learn-index-page/learn-index-page.component')
+          .then(m => m.LearnIndexPageComponent),
+      },
+      {
+        path: 'learn/lesson/:id',
+        loadComponent: () => import('./pages/learn-lesson-page/learn-lesson-page.component')
+          .then(m => m.LearnLessonPageComponent),
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full',
+      },
+    ],
+  },
 ];

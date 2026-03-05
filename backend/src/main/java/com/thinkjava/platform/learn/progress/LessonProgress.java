@@ -37,6 +37,9 @@ public class LessonProgress {
   @Column(name = "last_seen_at")
   private Instant lastSeenAt;
 
+  @Column(nullable = false)
+  private int percent = 0;
+
  
   public UUID getId() {
     return id;
