@@ -2,9 +2,11 @@ package com.thinkjava.platform.learn;
 
 import com.thinkjava.platform.learn.dto.AllLessonsResponse;
 import com.thinkjava.platform.learn.dto.LearnPathResponse;
+import com.thinkjava.platform.learn.dto.LearnRecommendationsResponse;
 import com.thinkjava.platform.learn.dto.LessonQuizSubmitRequest;
 import com.thinkjava.platform.learn.dto.LessonQuizSubmitResponse;
 import com.thinkjava.platform.learn.dto.LessonResponse;
+import com.thinkjava.platform.learn.dto.LessonSummaryResponse;
 import com.thinkjava.platform.user.User;
 import com.thinkjava.platform.user.UserService;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+// Controller class for handling learning-related API endpoints
 @RestController
 @RequestMapping("/api/learn")
 @CrossOrigin(origins = "http://localhost:4200")
@@ -42,16 +45,42 @@ public class LearnController {
   public LessonQuizSubmitResponse submitQuiz(
       @AuthenticationPrincipal User user,
       @PathVariable UUID id,
-      @RequestBody LessonQuizSubmitRequest req
-  ) {
+      @RequestBody LessonQuizSubmitRequest req) {
     return learnService.submitQuiz(user, id, req);
   }
 
   @GetMapping("/lessons")
-    public AllLessonsResponse allLessons(@AuthenticationPrincipal(expression = "username") String email) {
-    if (email == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing/invalid token");
+  public AllLessonsResponse allLessons(@AuthenticationPrincipal(expression = "username") String email) {
+    if (email == null)
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing/invalid token");
     User user = userService.findByEmail(email).orElseThrow();
     return learnService.getAllLessons(user);
+  }
+
+  @GetMapping("/recommendations")
+  public LearnRecommendationsResponse recommendations(
+      @AuthenticationPrincipal(expression = "username") String email) {
+    if (email == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing/invalid token");
     }
+    User user = userService.findByEmail(email).orElseThrow();
+    return learnService.getRecommendations(user);
+  }
+
+  @GetMapping("/current-focus")
+  public LessonSummaryResponse currentFocus(@AuthenticationPrincipal User user) {
+    if (user == null) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user");
+    }
+    return learnService.getCurrentFocus(user);
+  }
+
+  @PostMapping("/debug/recompute-mastery")
+  public void recomputeMastery(@AuthenticationPrincipal User user) {
+    if (user == null) {
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user");
+    }
+    learnService.recomputeAllCheckpointMastery(user);
+}
 
 }

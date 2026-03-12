@@ -1,1 +1,176 @@
-<p>dashboard-page works!</p>
+<div class="dash-shell">
+  <div class="dash-container">
+    <main class="container">
+      <!-- Greeting -->
+      <section class="hero">
+        <div class="hero-card">
+          <div class="hero-left">
+            <div class="hero-title">Hi, {{ displayName || 'there' }} 👋</div>
+            <div class="hero-sub">Ready to continue your Java journey?</div>
+            <div class="hero-meta">
+              Your current mastery: <b>{{ masteryLabel }}</b>
+            </div>
+
+            <div class="hero-actions">
+              <button class="btn primary" (click)="continueLesson()">Continue Learning</button>
+              <button class="btn ghost" (click)="takeQuiz()">Take Quiz</button>
+              <button class="btn soft" (click)="askTutor()">Ask Tutor</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Recommended next lesson -->
+      <div class="card rec-ai" *ngIf="!loadingRecommendation && recommendedLesson">
+        <div class="card-head split">
+          <div class="card-title">Recommended Next Lesson</div>
+          <div class="card-sub">Based on your current progress</div>
+        </div>
+
+        <div class="rec-ai-box">
+          <div class="rec-ai-topic">{{ recommendedLesson.title }}</div>
+
+          <div class="rec-ai-desc">
+            This is the best next lesson to strengthen your weaker areas and keep your learning path moving.
+          </div>
+
+          <div class="rec-ai-meta">
+            <span><b>Topic:</b> {{ getCheckpointLabel(recommendedLesson.checkpoint) }}</span>
+            <span><b>Level:</b> {{ recommendedLesson.levelTag }}</span>
+            <span><b>Time:</b> {{ recommendedLesson.estimatedMinutes }} min</span>
+          </div>
+
+          <div class="rec-ai-focus" *ngIf="recommendations?.weakAreas?.length">
+            <span class="rec-ai-focus-label">Focus areas:</span>
+            <span class="rec-ai-focus-value">{{ weakAreasLabel }}</span>
+          </div>
+
+          <button class="btn primary full" [routerLink]="['/learn/lesson', recommendedLesson.id]">
+            {{ recommendedLesson.status === 'in_progress' ? 'Go To Lesson ➤' : 'Start Learning ➤' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="card rec-ai" *ngIf="loadingRecommendation">
+        <div class="card-head split">
+          <div class="card-title">Recommended Next Lesson</div>
+          <div class="card-sub">Loading</div>
+        </div>
+
+        <div class="rec-ai-box">
+          <div class="rec-ai-topic">Finding your best next lesson...</div>
+          <div class="rec-ai-desc">
+            We’re checking your current mastery and lesson progress to recommend the right topic.
+          </div>
+        </div>
+      </div>
+
+      <div class="card rec-ai" *ngIf="!loadingRecommendation && !recommendedLesson">
+        <div class="card-head split">
+          <div class="card-title">Recommended Next Lesson</div>
+          <div class="card-sub">Unavailable</div>
+        </div>
+
+        <div class="rec-ai-box">
+          <div class="rec-ai-topic">No recommendation available yet</div>
+          <div class="rec-ai-desc">
+            Complete your diagnostic or start learning to get a personalized next-step recommendation.
+          </div>
+        </div>
+      </div>
+
+      <section class="grid">
+        <!-- Mastery Overview -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Overall Mastery</div>
+          </div>
+
+          <div class="mastery">
+            <div class="ring">
+              <svg viewBox="0 0 120 120" class="ring-svg">
+                <circle class="ring-bg" cx="60" cy="60" r="46"></circle>
+                <circle class="ring-fg" cx="60" cy="60" r="46" [attr.stroke-dasharray]="ringDasharray"
+                  [attr.stroke-dashoffset]="ringDashoffset">
+                </circle>
+              </svg>
+
+              <div class="ring-center">
+                <div class="ring-num">{{ masteryPercent }}%</div>
+                <div class="ring-sub">Mastery</div>
+              </div>
+            </div>
+
+            <div class="mastery-foot">
+              <div class="meta-row">
+                <span class="meta-k">Course Progress</span>
+                <span class="meta-v">
+                  {{ completedLessons }}/{{ totalLessons }} lessons completed
+                </span>
+              </div>
+
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="courseProgressPercent"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Focus -->
+        <div class="card">
+          <div class="card-head split">
+            <div class="card-title">Current Focus</div>
+            <div class="chip">In Progress</div>
+          </div>
+
+          <div class="focus-title">{{ currentFocusTitle }}</div>
+          <div class="focus-sub">{{ currentFocusSubtitle }}</div>
+
+          <div class="codebox">
+            <pre><code>{{ currentFocusCode }}</code></pre>
+          </div>
+        </div>
+      </section>
+      <section class="card checkpoint-card" *ngIf="checkpointProgressItems.length">
+        <div class="card-head split">
+          <div class="card-title">Topic Progress</div>
+          <div class="card-sub">Lessons completed in each topic</div>
+        </div>
+
+        <div class="checkpoint-grid">
+          <div class="checkpoint-block" *ngFor="let item of checkpointProgressItems">
+            <div class="checkpoint-row-top">
+              <span class="checkpoint-name">{{ item.label }}</span>
+              <span class="checkpoint-percent">{{ item.completed }}/{{ item.total }} completed</span>
+            </div>
+
+            <div class="checkpoint-bar wide">
+              <div class="checkpoint-fill" [style.width.%]="item.percent"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="card activity">
+        <div class="card-head split">
+          <div class="card-title">Recent Activity</div>
+        </div>
+
+        <div class="activity-list">
+          <div class="act" *ngFor="let a of recentActivity">
+            <div class="act-icon">◦</div>
+            <div class="act-main">
+              <div class="act-title">{{ a.title }}</div>
+              <div class="act-time">{{ a.time }}</div>
+            </div>
+            <div class="pill" *ngIf="a.pill">{{ a.pill }}</div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="foot">© 2025 ThinkJava — Adaptive Learning Platform.</footer>
+    </main>
+  </div>
+</div>

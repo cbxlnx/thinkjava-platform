@@ -35,6 +35,10 @@
   background: var(--purple);
   color: white;
   font-weight: 700;
+  font-family: monospace;
+  font-size: 16px;
+  line-height: 1;
+  padding-top: 1px;   /* micro-adjust */
 }
 
 .brand-name{
@@ -105,7 +109,7 @@
 }
 
 .field input{
-  width: 100%;
+  width: 95%;
   height: 42px;
   border: 1px solid var(--border);
   background: var(--input-bg);

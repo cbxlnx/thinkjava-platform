@@ -36,7 +36,11 @@ public class LessonBlock {
   @Column(name = "video_url")
   private String videoUrl;
 
-  public LessonBlock() {}
+  @Column(columnDefinition = "jsonb")
+  private  String payload;
+
+  public LessonBlock() {
+  }
 
   public UUID getId() {
     return id;
@@ -92,5 +96,13 @@ public class LessonBlock {
 
   public void setVideoUrl(String videoUrl) {
     this.videoUrl = videoUrl;
+  }
+
+  public  String getPayload() {
+    return payload;
+  }
+
+  public void setPayload( String payload) {
+    this.payload = payload;
   }
 }

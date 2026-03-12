@@ -1,0 +1,410 @@
+<div class="page">
+  <div class="topbar">
+
+  </div>
+
+  <div *ngIf="loading" class="hint">Loading lesson…</div>
+  <div *ngIf="error && !loading" class="error">{{ error }}</div>
+
+  <ng-container *ngIf="!loading && data">
+    <!-- HERO -->
+    <header class="hero">
+      <div class="hero-inner">
+        <span class="module-pill">Java Fundamentals • Module 2</span>
+        <h1 class="hero-title">{{ data.lesson.title }}</h1>
+        <p class="hero-sub">
+          Introduction to variables, primitive types, reference types, and type conversion in Java.
+        </p>
+
+        <div class="meta">
+          <span class="pill">{{ data.lesson.checkpoint }}</span>
+          <span class="dot">•</span>
+          <span>Est. {{ data.lesson.estimatedMinutes }} min</span>
+        </div>
+      </div>
+    </header>
+    <div class="back-row">
+      <a class="back-btn" routerLink="/learn">
+        <span class="arrow">➤</span>
+        <span>Back to Learn</span>
+      </a>
+    </div>
+    <div class="layout">
+      <!-- MAIN -->
+      <main class="main">
+        <!-- Sections / Blocks -->
+        <section class="section-card" *ngFor="let b of uiBlocks; let idx = index; trackBy: trackByBlock"
+          [class.hidden]="b.type === 'MARKDOWN' && !b.markdown && !b.payloadObj">
+          <div class="section-top">
+            <div class="section-badge">
+              <span class="section-num">
+                {{ (idx + 1) < 10 ? ('0' + (idx + 1)) : (idx + 1) }} </span>
+                  <span class="section-label">{{ sectionLabel(b.type) }}</span>
+            </div>
+          </div>
+
+          <!-- MARKDOWN / CUSTOM LAYOUTS -->
+          <ng-container *ngIf="b.type === 'MARKDOWN'">
+            <ng-container [ngSwitch]="b.payloadObj?.layout">
+
+              <!-- ========== LAYOUT: split (text left + diagram/card right) ========== -->
+              <ng-container *ngSwitchCase="'split'">
+                <h2 class="section-title">
+                  {{ b.payloadObj?.title || extractTitle(b.markdown) }}
+                </h2>
+
+                <div class="split">
+                  <div class="split-left md">
+                    <markdown [data]="b.payloadObj?.left?.markdown || stripTitle(b.markdown)"></markdown>
+                  </div>
+
+                  <div class="split-right">
+                    <ng-container [ngSwitch]="b.payloadObj?.right?.diagram">
+
+                      <!-- Diagram: variable boxes -->
+                      <div *ngSwitchCase="'variableBoxes'" class="var-diagram">
+                        <div class="var-boxes">
+                          <div class="var-box" *ngFor="let it of (b.payloadObj?.right?.items || [])">
+                            <div class="var-value">{{ it.value }}</div>
+                            <div class="var-label">{{ it.label }}</div>
+                          </div>
+                        </div>
+                        <div class="var-caption">{{ b.payloadObj?.right?.caption }}</div>
+                      </div>
+
+                      <!-- Diagram: tips card -->
+                      <div *ngSwitchCase="'tipsCard'" class="tips-card">
+                        <div class="tips-head">
+                          <span class="tips-icon">i</span>
+                          <div class="tips-title">{{ b.payloadObj?.right?.title }}</div>
+                        </div>
+
+                        <div class="tips-list">
+                          <div class="tip" *ngFor="let t of (b.payloadObj?.right?.tips || [])">
+                            <span class="tip-arrow">➜</span>
+                            <div class="tip-body">
+                              <b>{{ t.label }}</b>
+                              <span class="tip-text"> — {{ t.text }}</span>
+                              <code class="tip-code" *ngIf="t.code">{{ t.code }}</code>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Unknown right-side diagram -->
+                      <div *ngSwitchDefault class="hint">
+                        Unknown diagram type.
+                      </div>
+                    </ng-container>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- ========== LAYOUT: primitiveGrid (section 2) ========== -->
+              <ng-container *ngSwitchCase="'primitiveGrid'">
+                <h2 class="section-title">{{ b.payloadObj?.title || 'Primitive Data Types' }}</h2>
+                <p class="section-sub" *ngIf="b.payloadObj?.subtitle">{{ b.payloadObj?.subtitle }}</p>
+
+                <div class="primitive-grid">
+                  <div class="primitive-card" *ngFor="let it of (b.payloadObj?.items || [])"
+                    [ngClass]="'card-' + (it.color || 'blue')">
+                    <div class="primitive-badge">{{ it.name }}</div>
+                    <p class="primitive-desc">{{ it.description }}</p>
+                    <pre class="primitive-code">{{ it.example }}</pre>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- ========== LAYOUT: referenceCards (section 3) ========== -->
+              <ng-container *ngSwitchCase="'referenceCards'">
+                <h2 class="section-title">{{ b.payloadObj?.title || 'Reference Data Types' }}</h2>
+                <p class="section-sub" *ngIf="b.payloadObj?.subtitle">{{ b.payloadObj?.subtitle }}</p>
+
+                <div class="ref-grid">
+                  <div class="ref-card" *ngFor="let it of (b.payloadObj?.items || [])">
+                    <div class="ref-top">
+                      <div class="ref-icon" [ngClass]="'ico-' + (it.icon || 'default')"></div>
+                      <div class="ref-title">{{ it.title }}</div>
+                    </div>
+
+                    <p class="ref-desc">{{ it.description }}</p>
+                    <pre class="ref-code">{{ it.example }}</pre>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- ========== LAYOUT: codeSplit (section 4) ========== -->
+              <ng-container *ngSwitchCase="'codeSplit'">
+                <h2 class="section-title">{{ b.payloadObj?.title || 'Declaring and Updating Variables' }}</h2>
+                <p class="section-sub" *ngIf="b.payloadObj?.subtitle">{{ b.payloadObj?.subtitle }}</p>
+
+                <div class="code-split">
+                  <!-- LEFT: code window -->
+                  <div class="code-window">
+                    <div class="code-header">
+                      <div class="code-dots">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                      </div>
+                      <div class="code-filename">
+                        {{ b.payloadObj?.code?.filename || 'Variables.java' }}
+                      </div>
+                    </div>
+
+                    <pre class="code-body" [innerHTML]="highlightJava(b.payloadObj?.code?.content || '')"></pre>
+                  </div>
+
+                  <!-- RIGHT: note card -->
+                  <div class="note-card">
+                    <div class="note-title">
+                      <span class="note-i">i</span>
+                      <span>{{ b.payloadObj?.note?.title || 'Naming Conventions' }}</span>
+                    </div>
+
+                    <div class="note-items">
+                      <div class="note-item" *ngFor="let n of (b.payloadObj?.note?.items || [])">
+                        <div class="note-bullet">➜</div>
+                        <div class="note-text">
+                          <b>{{ n.label }}</b>
+                          <span class="muted"> — {{ n.text }}</span>
+                          <span class="chip" *ngIf="n.chip">{{ n.chip }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- ========== LAYOUT: infoCode (REUSABLE for section 5 + section 7) ========== -->
+              <ng-container *ngSwitchCase="'infoCode'">
+                <h2 class="section-title">{{ b.payloadObj?.title || 'Info + Code' }}</h2>
+                <p class="section-sub" *ngIf="b.payloadObj?.subtitle">{{ b.payloadObj?.subtitle }}</p>
+
+                <div class="casting-split">
+                  <!-- LEFT: info card -->
+                  <div class="casting-info">
+                    <ng-container *ngFor="let it of (b.payloadObj?.left?.items || [])">
+                      <div class="casting-block">
+                        <div class="casting-h" *ngIf="it.title">
+                          <span class="casting-dot" [ngClass]="'dot-' + (it.dot || 'blue')"></span>
+                          <span class="casting-ht">{{ it.title }}</span>
+                        </div>
+
+                        <p class="casting-p" *ngIf="it.text">{{ it.text }}</p>
+                        <div class="casting-html" *ngIf="it.html" [innerHTML]="it.html"></div>
+                      </div>
+
+                      <div class="casting-divider" *ngIf="!it.hideDivider"></div>
+                    </ng-container>
+
+                    <!-- optional warning -->
+                    <div class="casting-warn" *ngIf="b.payloadObj?.left?.warning">
+                      <div class="warn-row">
+                        <span class="warn-icon">⚠</span>
+                        <span class="warn-text">{{ b.payloadObj?.left?.warning }}</span>
+                      </div>
+                    </div>
+
+                    <!-- optional callout (tip card style) -->
+                    <div class="casting-callout" *ngIf="b.payloadObj?.left?.callout">
+                      <div class="warn-row">
+                        <span class="warn-icon">{{ b.payloadObj?.left?.callout?.icon || 'i' }}</span>
+                        <span class="warn-text" [innerHTML]="b.payloadObj?.left?.callout?.html"></span>
+                      </div>
+                      <span class="chip" *ngIf="b.payloadObj?.left?.callout?.chip">
+                        {{ b.payloadObj?.left?.callout?.chip }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- RIGHT: code window -->
+                  <div class="code-window">
+                    <div class="code-header">
+                      <div class="code-dots">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                      </div>
+                      <div class="code-filename">
+                        {{ b.payloadObj?.code?.filename || 'Snippet.java' }}
+                      </div>
+                    </div>
+
+                    <pre class="code-body" [innerHTML]="highlightJava(b.payloadObj?.code?.content || '')"></pre>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- ========== LAYOUT: pitfallsGrid (section 6) ========== -->
+              <ng-container *ngSwitchCase="'pitfallsGrid'">
+                <h2 class="section-title">{{ b.payloadObj?.title || 'Common Pitfalls' }}</h2>
+                <p class="section-sub" *ngIf="b.payloadObj?.subtitle">{{ b.payloadObj?.subtitle }}</p>
+
+                <div class="pitfalls-grid">
+                  <div class="pitfall-card" *ngFor="let it of (b.payloadObj?.items || [])">
+                    <div class="pitfall-top">
+                      <div class="pitfall-ico" [ngClass]="'ico-' + (it.icon || 'warn')"></div>
+                      <div class="pitfall-title">{{ it.title }}</div>
+                    </div>
+                    <div class="pitfall-text">{{ it.text }}</div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'summary'">
+                <section class="summary-card">
+                  <h2 class="section-title">{{ b.payloadObj?.title || 'Key Takeaways' }}</h2>
+
+                  <ul class="summary-list">
+                    <li *ngFor="let item of b.payloadObj?.items">
+                      {{ item }}
+                    </li>
+                  </ul>
+                </section>
+              </ng-container>
+
+              <!-- ========== DEFAULT (plain markdown) ========== -->
+              <ng-container *ngSwitchDefault>
+                <h2 class="section-title">{{ extractTitle(b.markdown) }}</h2>
+                <div class="md">
+                  <markdown [data]="stripTitle(b.markdown)"></markdown>
+                </div>
+              </ng-container>
+
+            </ng-container>
+          </ng-container>
+
+          <!-- VIDEO -->
+          <ng-container *ngIf="b.type === 'VIDEO'">
+            <h2 class="section-title">{{ b.videoTitle || 'Video' }}</h2>
+
+            <ng-container *ngIf="b.safeVideoUrl as safeUrl; else noVideo">
+              <div class="video-wrap">
+                <iframe [src]="safeUrl" title="Lesson video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen></iframe>
+              </div>
+            </ng-container>
+
+            <ng-template #noVideo>
+              <div class="hint">No video URL provided.</div>
+            </ng-template>
+          </ng-container>
+
+          <!-- INLINE_QUIZ placeholder -->
+          <ng-container *ngIf="b.type === 'INLINE_QUIZ'">
+            <h2 class="section-title">Quick check</h2>
+            <div class="hint">Inline quiz block (coming next).</div>
+          </ng-container>
+        </section>
+
+        <!-- Quiz card -->
+        <section class="section-card">
+          <div class="section-top">
+            <div class="section-badge">
+              <span class="section-num">Q</span>
+              <span class="section-label">QUIZ</span>
+            </div>
+          </div>
+
+          <h2 class="section-title">Lesson Quiz</h2>
+
+          <div class="q" *ngFor="let q of data.quiz.questions; let i = index">
+            <div class="q-prompt">
+              <div class="q-num">Q{{ i + 1 }}</div>
+              <markdown [data]="normalizeMarkdown(q.prompt)"></markdown>
+            </div>
+
+            <div class="options">
+              <label class="opt" *ngFor="let opt of q.options">
+                <input type="radio" [name]="q.id" [checked]="answers[q.id] === opt" (change)="setAnswer(q.id, opt)" />
+                <span>{{ opt }}</span>
+              </label>
+            </div>
+          </div>
+
+          <button class="primary" (click)="submitQuiz()" [disabled]="!canSubmit() || submitting">
+            {{ submitting ? 'Submitting…' : 'Submit Quiz' }}
+          </button>
+
+          <div class="result" *ngIf="submitResult">
+  <div class="result-row">
+    <span class="badge" [class.good]="submitResult.passed" [class.bad]="!submitResult.passed">
+      {{ submitResult.passed ? 'Passed' : 'Not passed' }}
+    </span>
+
+    <span class="muted">
+      Score: {{ (submitResult.score * 100) | number:'1.0-0' }}%
+    </span>
+  </div>
+
+  <div class="result-actions" *ngIf="submitResult.passed">
+    <button class="secondary" (click)="goNext()" [disabled]="!submitResult.nextId">
+      Continue to Next Lesson
+    </button>
+
+    <button class="secondary outline" [routerLink]="['/dashboard']">
+      Back to Dashboard
+    </button>
+  </div>
+
+  <div class="post-quiz-recs" *ngIf="submitResult.passed">
+    <h3 class="post-quiz-title">Recommended next lessons</h3>
+    <p class="hint small">Choose what you want to study next.</p>
+
+    <div *ngIf="loadingPostQuizRecommendations" class="hint small">
+      Loading recommendations...
+    </div>
+
+    <div class="post-quiz-grid" *ngIf="!loadingPostQuizRecommendations && postQuizRecommendations.length">
+      <div class="post-quiz-card" *ngFor="let lesson of postQuizRecommendations">
+        <div class="post-quiz-card-top">
+          <span class="post-quiz-pill">{{ lesson.levelTag }}</span>
+          <span class="post-quiz-time">⏱ {{ lesson.estimatedMinutes }} min</span>
+        </div>
+
+        <div class="post-quiz-card-title">{{ lesson.title }}</div>
+        <div class="post-quiz-card-sub">{{ lesson.checkpoint }}</div>
+
+        <button class="secondary" [routerLink]="['/learn/lesson', lesson.id]">
+          Open Lesson
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="!loadingPostQuizRecommendations && !postQuizRecommendations.length" class="hint small">
+      No additional recommendations available right now.
+    </div>
+  </div>
+
+  <div class="hint small" *ngIf="!submitResult.passed">
+    Review the lesson and try again.
+  </div>
+</div>
+        </section>
+      </main>
+
+      <!-- SIDEBAR -->
+      <aside class="side">
+        <div class="tutor">
+          <div class="tutor-title">AI Tutor</div>
+          <div class="tutor-sub">Need help understanding this lesson?</div>
+
+          <div class="tutor-actions">
+            <button class="chip-btn" type="button">Simplify this</button>
+            <button class="chip-btn" type="button">Show another example</button>
+            <button class="chip-btn" type="button">Explain my error</button>
+          </div>
+
+          <div class="tutor-bubble">
+            Hi! I’m here to help you with <b>{{ data.lesson.checkpoint }}</b>.
+          </div>
+
+          <input class="tutor-input" placeholder="Ask Tutor about this topic…" disabled />
+          <div class="hint small">Tutor is a future feature (pgvector).</div>
+        </div>
+      </aside>
+    </div>
+  </ng-container>
+</div>

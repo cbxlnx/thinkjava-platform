@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { LearnService, LessonSummary, UserLevel } from '../../core/learn/learn.service';
+import { LearnService, LearnRecommendationsResponse, LessonSummary, UserLevel } from '../../core/learn/learn.service';
 
 type FilterChip = 'All' | 'Beginner' | 'Intermediate' | 'Advanced' | 'Completed';
 
@@ -24,10 +24,15 @@ export class LearnIndexPageComponent implements OnInit {
   search = '';
   chip: FilterChip = 'All';
 
-  constructor(private learn: LearnService, private router: Router) {}
+  recommendations: LearnRecommendationsResponse | null = null;
+  topRecommendedLessons: LessonSummary[] = [];
+  loadingRecommendations = false;
+
+  constructor(private learn: LearnService, private router: Router) { }
 
   ngOnInit(): void {
     this.load();
+    this.loadRecommendations();
   }
 
   load() {
@@ -50,30 +55,91 @@ export class LearnIndexPageComponent implements OnInit {
       },
     });
   }
+  
+
+  loadRecommendations(): void {
+    this.loadingRecommendations = true;
+
+    this.learn.getRecommendations().subscribe({
+      next: (res) => {
+        this.recommendations = res;
+        this.topRecommendedLessons = res.recommendedLessons.slice(0, 3);
+        this.loadingRecommendations = false;
+      },
+      error: (err) => {
+        console.error('Failed to load learn recommendations', err);
+        this.loadingRecommendations = false;
+      }
+    });
+  }
+
+  getCheckpointLabel(checkpoint?: string | null): string {
+    if (!checkpoint) return '';
+    switch (checkpoint) {
+      case 'fundamentals': return 'Fundamentals';
+      case 'loops': return 'Loops';
+      case 'arrays': return 'Arrays';
+      case 'methods': return 'Methods';
+      case 'oop': return 'OOP';
+      default: return checkpoint;
+    }
+  }
+
+  getCtaLabel(lesson: LessonSummary): string {
+    return lesson.status === 'in_progress' ? 'Continue' : 'Start';
+  }
 
   // ----- counts -----
   get completedCount(): number {
     return this.lessons.filter(l => l.status === 'completed').length;
   }
+
   get activeCount(): number {
-    return this.lessons.filter(l => l.status === 'in_progress').length;
+    return this.lessons.filter(l => !l.locked && l.status !== 'completed').length;
   }
+
   get upcomingCount(): number {
-    return this.lessons.filter(l => l.status === 'not_started').length;
+    return this.lessons.filter(l => l.locked && l.status !== 'completed').length;
   }
 
   // ----- groups -----
   get completedLessons(): LessonSummary[] {
-    return this.filtered(this.lessons.filter(l => l.status === 'completed'));
-  }
+  return this.filtered(
+    this.lessons
+      .filter(l => l.status === 'completed')
+      .sort((a, b) => {
+        if (a.checkpoint !== b.checkpoint) return a.checkpoint.localeCompare(b.checkpoint);
+        return a.orderIndex - b.orderIndex;
+      })
+  );
+}
 
-  get activeLessons(): LessonSummary[] {
-    return this.filtered(this.lessons.filter(l => l.status === 'in_progress'));
-  }
+get activeLessons(): LessonSummary[] {
+  return this.filtered(
+    this.lessons
+      .filter(l => !l.locked && l.status !== 'completed')
+      .sort((a, b) => {
+        // in_progress first
+        if (a.status === 'in_progress' && b.status !== 'in_progress') return -1;
+        if (a.status !== 'in_progress' && b.status === 'in_progress') return 1;
 
-  get upcomingLessons(): LessonSummary[] {
-    return this.filtered(this.lessons.filter(l => l.status === 'not_started'));
-  }
+        // then keep normal lesson order
+        if (a.checkpoint !== b.checkpoint) return a.checkpoint.localeCompare(b.checkpoint);
+        return a.orderIndex - b.orderIndex;
+      })
+  );
+}
+
+get upcomingLessons(): LessonSummary[] {
+  return this.filtered(
+    this.lessons
+      .filter(l => l.locked && l.status !== 'completed')
+      .sort((a, b) => {
+        if (a.checkpoint !== b.checkpoint) return a.checkpoint.localeCompare(b.checkpoint);
+        return a.orderIndex - b.orderIndex;
+      })
+  );
+}
 
   // ----- filtering -----
   setChip(c: FilterChip) {
@@ -116,4 +182,7 @@ export class LearnIndexPageComponent implements OnInit {
     };
     return map[cp] ?? cp;
   }
+
+
+  
 }
