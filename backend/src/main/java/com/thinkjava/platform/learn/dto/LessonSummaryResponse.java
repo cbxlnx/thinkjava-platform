@@ -13,6 +13,6 @@ public record LessonSummaryResponse(
     int difficulty,          // 1..3
     String levelTag,         // Beginner/Intermediate/Advanced
     String status,           // completed/in_progress/not_started
-    int masteryPercent,      // 0..100 (checkpoint mastery)
+    int progressPercent,      // 0..100 (checkpoint mastery)
     boolean locked
 ) {}

@@ -6,6 +6,7 @@ import com.thinkjava.platform.diagnostic.result.DiagnosticResult;
 import com.thinkjava.platform.diagnostic.result.DiagnosticResultRepository;
 import com.thinkjava.platform.learn.dto.AllLessonsResponse;
 import com.thinkjava.platform.learn.dto.LearnPathResponse;
+import com.thinkjava.platform.learn.dto.LearnRecommendationsResponse;
 import com.thinkjava.platform.learn.dto.LessonQuizSubmitRequest;
 import com.thinkjava.platform.learn.dto.LessonQuizSubmitResponse;
 import com.thinkjava.platform.learn.dto.LessonResponse;
@@ -22,7 +23,6 @@ import com.thinkjava.platform.learn.quiz.LessonQuizQuestion;
 import com.thinkjava.platform.learn.quiz.LessonQuizQuestionRepository;
 import com.thinkjava.platform.learn.section.LessonBlock;
 import com.thinkjava.platform.learn.section.LessonBlockRepository;
-import com.thinkjava.platform.learn.model.LessonBlockType;
 import com.thinkjava.platform.user.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -53,8 +53,7 @@ public class LearnService {
             LessonQuizQuestionRepository quizRepository,
             LessonProgressRepository progressRepository,
             MasteryRepository masteryRepository,
-            DiagnosticResultRepository diagnosticRepository
-    ) {
+            DiagnosticResultRepository diagnosticRepository) {
         this.lessonRepository = lessonRepository;
         this.blockRepository = blockRepository;
         this.quizRepository = quizRepository;
@@ -81,7 +80,7 @@ public class LearnService {
     }
 
     private Checkpoint getStartCheckpoint(User user) {
-        // DiagnosticResultRepository in your project uses userId (Long) -> keep as-is
+        // DiagnosticResultRepository in your project uses userId (Long) keep as-is
         return diagnosticRepository.findByUserId(user.getId())
                 .map(DiagnosticResult::getStartModule)
                 .map(this::toCheckpointSafe)
@@ -89,7 +88,8 @@ public class LearnService {
     }
 
     private Checkpoint toCheckpointSafe(String raw) {
-        if (raw == null) return Checkpoint.fundamentals;
+        if (raw == null)
+            return Checkpoint.fundamentals;
         try {
             return Checkpoint.valueOf(raw.trim());
         } catch (Exception e) {
@@ -104,16 +104,16 @@ public class LearnService {
         }
 
         Set<UUID> completedLessonIds = progressRepository.findByUser(user).stream()
-                .filter(p -> p.getStatus() == LessonStatus.completed)
+                .filter(p -> p.getStatus() == LessonStatus.completed)// if there is an incomplete lesson , return it.
                 .map(p -> p.getLesson().getId())
                 .collect(Collectors.toSet());
 
         List<Checkpoint> order = List.of(
-                Checkpoint.fundamentals, Checkpoint.loops, Checkpoint.arrays, Checkpoint.methods, Checkpoint.oop
-        );
+                Checkpoint.fundamentals, Checkpoint.loops, Checkpoint.arrays, Checkpoint.methods, Checkpoint.oop);
 
         int startIdx = order.indexOf(start);
-        if (startIdx < 0) startIdx = 0;
+        if (startIdx < 0)
+            startIdx = 0;
 
         for (int i = startIdx; i < order.size(); i++) {
             Checkpoint cp = order.get(i);
@@ -124,22 +124,25 @@ public class LearnService {
                     .sorted(Comparator.comparingInt(Lesson::getOrderIndex))
                     .toList();
 
-            if (cpLessons.isEmpty()) continue;
+            if (cpLessons.isEmpty())
+                continue;
 
             Optional<Lesson> firstIncomplete = cpLessons.stream()
                     .filter(l -> !completedLessonIds.contains(l.getId()))
                     .findFirst();
 
-            if (firstIncomplete.isPresent()) return firstIncomplete.get().getId();
+            if (firstIncomplete.isPresent())
+                return firstIncomplete.get().getId();
 
             // all completed: move forward only if mastery is high
-            if (mastery >= 0.80) continue;
+            if (mastery >= 0.80)
+                continue;
 
-            // mastery not high -> suggest last lesson for review
+            // mastery not high suggest last lesson for review
             return cpLessons.get(cpLessons.size() - 1).getId();
         }
 
-        // everything done -> last lesson
+        // everything done last lesson
         return allLessons.get(allLessons.size() - 1).getId();
     }
 
@@ -151,21 +154,25 @@ public class LearnService {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
 
-        // Load blocks ordered by section_order (mapped as orderIndex in LessonBlock)
+        // load blocks ordered by section_order (mapped as orderIndex in LessonBlock)
         List<LessonBlock> blocks = blockRepository.findByLessonIdOrderByOrderIndexAsc(lessonId);
 
-        List<LessonResponse.SectionDto> sections = blocks.stream()
-                .filter(b -> b.getType() == null || b.getType() == LessonBlockType.MARKDOWN)
-                .map(b -> new LessonResponse.SectionDto(b.getOrderIndex(), b.getMarkdown()))
+        List<LessonResponse.BlockDto> blockDtos = blocks.stream()
+                .map(b -> new LessonResponse.BlockDto(
+                        b.getOrderIndex(),
+                        b.getType(),
+                        b.getMarkdown(),
+                        b.getVideoTitle(),
+                        b.getVideoUrl(),
+                        b.getPayload()))
                 .toList();
-
+        // load quiz questions ordered by difficulty
         List<LessonQuizQuestion> quizEntities = quizRepository.findByLessonIdOrderByDifficultyAsc(lessonId);
         List<LessonResponse.QuizQuestionDto> quizQuestions = quizEntities.stream()
                 .map(q -> new LessonResponse.QuizQuestionDto(
                         q.getId(),
                         q.getPrompt(),
-                        parseOptions(q.getOptionsJson())
-                ))
+                        parseOptions(q.getOptionsJson())))
                 .toList();
 
         upsertInProgress(user, lesson);
@@ -176,13 +183,13 @@ public class LearnService {
                         lesson.getCheckpoint(),
                         lesson.getTitle(),
                         lesson.getOrderIndex(),
-                        lesson.getEstimatedMinutes()
-                ),
-                sections,
-                new LessonResponse.QuizDto(quizQuestions)
-        );
+                        lesson.getEstimatedMinutes()),
+                blockDtos,
+                new LessonResponse.QuizDto(quizQuestions));
     }
 
+    // helper to mark lesson as in_progress if not already, and update last seen
+    // timestamp
     private void upsertInProgress(User user, Lesson lesson) {
         LessonProgress p = progressRepository.findByUserAndLessonId(user, lesson.getId())
                 .orElseGet(LessonProgress::new);
@@ -190,15 +197,18 @@ public class LearnService {
         p.setUser(user);
         p.setLesson(lesson);
 
-        if (p.getStatus() == null) p.setStatus(LessonStatus.in_progress);
+        if (p.getStatus() == null)
+            p.setStatus(LessonStatus.in_progress);
 
         p.setLastSeenAt(Instant.now());
         progressRepository.save(p);
     }
 
+    // helper to parse options JSON into List<String>
     private List<String> parseOptions(String optionsJson) {
         try {
-            return objectMapper.readValue(optionsJson, new TypeReference<List<String>>() {});
+            return objectMapper.readValue(optionsJson, new TypeReference<List<String>>() {
+            });
         } catch (Exception e) {
             return List.of();
         }
@@ -207,6 +217,8 @@ public class LearnService {
     // ---------------------------------------------------------
     // QUIZ SUBMIT
     // ---------------------------------------------------------
+    // main method to handle quiz submission, calculate score, update progress and
+    // mastery, and recommend next lesson
     @Transactional
     public LessonQuizSubmitResponse submitQuiz(User user, UUID lessonId, LessonQuizSubmitRequest req) {
         Lesson lesson = lessonRepository.findById(lessonId)
@@ -223,7 +235,9 @@ public class LearnService {
         for (LessonQuizQuestion q : questions) {
             String userAnswer = answers.get(q.getId());
             String correctAnswer = parseCorrect(q.getCorrectJson());
-            if (userAnswer != null && userAnswer.equals(correctAnswer)) correct++;
+            if (userAnswer != null && userAnswer.equals(correctAnswer)) {
+                correct++;
+            }
         }
 
         double score = (double) correct / questions.size();
@@ -232,17 +246,22 @@ public class LearnService {
         LessonProgress p = progressRepository.findByUserAndLessonId(user, lessonId)
                 .orElseGet(LessonProgress::new);
 
+        Double previousBest = p.getBestQuizScore();
+
         p.setUser(user);
         p.setLesson(lesson);
         p.setLastSeenAt(Instant.now());
-        p.setBestQuizScore(p.getBestQuizScore() == null ? score : Math.max(p.getBestQuizScore(), score));
+        p.setBestQuizScore(previousBest == null ? score : Math.max(previousBest, score));
 
-        if (passed) p.setStatus(LessonStatus.completed);
-        else if (p.getStatus() == null) p.setStatus(LessonStatus.in_progress);
+        if (passed) {
+            p.setStatus(LessonStatus.completed);
+        } else if (p.getStatus() == null) {
+            p.setStatus(LessonStatus.in_progress);
+        }
 
         progressRepository.save(p);
 
-        double updatedCheckpointMastery = updateMastery(user, lesson.getCheckpoint(), score);
+        double updatedCheckpointMastery = recomputeCheckpointMastery(user, lesson.getCheckpoint());
 
         Map<Checkpoint, Double> masteryMap = masteryRepository.findByUser(user)
                 .stream()
@@ -253,6 +272,8 @@ public class LearnService {
         return new LessonQuizSubmitResponse(score, passed, updatedCheckpointMastery, nextLessonId);
     }
 
+    // helper to parse correct answer JSON (could be string or more complex
+    // structure)
     private String parseCorrect(String correctJson) {
         try {
             return objectMapper.readValue(correctJson, String.class);
@@ -264,34 +285,85 @@ public class LearnService {
     // ---------------------------------------------------------
     // MASTERY UPDATE
     // ---------------------------------------------------------
-    private double updateMastery(User user, Checkpoint checkpoint, double score) {
-        Mastery m = masteryRepository.findByUserAndCheckpoint(user, checkpoint)
-                .orElseGet(Mastery::new);
 
-        m.setUser(user);
-        m.setCheckpoint(checkpoint);
+    // method to recompute mastery for a checkpoint based on diagnostic baseline and
+    // lesson completion ratio, and update the Mastery entity
+    private double recomputeCheckpointMastery(User user, Checkpoint checkpoint) {
+    DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId()).orElseThrow();
 
-        double old = (m.getUpdatedAt() == null) ? 0.10 : m.getMasteryValue();
+    double baseline = switch (checkpoint) {
+        case fundamentals -> mapLevel(dr.getFundamentals());
+        case loops -> mapLevel(dr.getLoops());
+        case arrays -> mapLevel(dr.getArrays());
+        case methods -> mapLevel(dr.getMethods());
+        case oop -> mapLevel(dr.getOop());
+    };
 
-        double delta = (score - 0.60) * 0.20;
-        double next = clamp(old + delta, 0.0, 1.0);
+    List<Lesson> checkpointLessons = lessonRepository
+            .findByActiveTrueOrderByCheckpointAscOrderIndexAsc()
+            .stream()
+            .filter(l -> l.getCheckpoint() == checkpoint)
+            .toList();
 
-        m.setMasteryValue(next);
-        m.setUpdatedAt(Instant.now());
-        masteryRepository.save(m);
+    Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user)
+            .stream()
+            .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
 
-        return next;
+    long completed = checkpointLessons.stream()
+            .filter(l -> {
+                LessonProgress p = progressMap.get(l.getId());
+                return p != null && p.getStatus() == LessonStatus.completed;
+            })
+            .count();
+
+    Mastery m = masteryRepository.findByUserAndCheckpoint(user, checkpoint)
+            .orElseGet(Mastery::new);
+
+    m.setUser(user);
+    m.setCheckpoint(checkpoint);
+
+    double mastery;
+
+    // no lessons in this checkpoint -> keep baseline
+    if (checkpointLessons.isEmpty()) {
+        mastery = baseline;
     }
+    // checkpoint fully completed -> boost mastery
+    else if (completed == checkpointLessons.size()) {
+        mastery = Math.max(baseline, 0.85);
+    }
+    // checkpoint NOT fully completed -> keep current stored mastery (or baseline if missing)
+    else {
+        Double currentMastery = m.getMasteryValue();
+        mastery = (currentMastery != null) ? currentMastery : baseline;
+    }
+
+    mastery = clamp(mastery, 0.0, 1.0);
+
+    m.setMasteryValue(mastery);
+    m.setUpdatedAt(Instant.now());
+    masteryRepository.save(m);
+
+    return mastery;
+}
 
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
+    }
+
+    @Transactional
+    public void recomputeAllCheckpointMastery(User user) {
+        for (Checkpoint cp : Checkpoint.values()) {
+            recomputeCheckpointMastery(user, cp);
+        }
     }
 
     // ---------------------------------------------------------
     // BOOTSTRAP mastery from DiagnosticResult (first time only)
     // ---------------------------------------------------------
     private void ensureMasteryBootstrapped(User user) {
-        if (!masteryRepository.findByUser(user).isEmpty()) return;
+        if (!masteryRepository.findByUser(user).isEmpty())
+            return;
 
         DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Diagnostic not completed"));
@@ -315,13 +387,22 @@ public class LearnService {
     }
 
     private double mapLevel(String level) {
-        if (level == null) return 0.10;
+        if (level == null)
+            return 0.10;
         return switch (level) {
             case "Strong" -> 0.85;
             case "Medium" -> 0.60;
             case "Weak" -> 0.30;
             case "Unknown" -> 0.10;
             default -> 0.10;
+        };
+    }
+
+    private int progressForStatus(String status) {
+        return switch (status) {
+            case "completed" -> 100;
+            case "in_progress" -> 50;
+            default -> 0;
         };
     }
 
@@ -336,23 +417,22 @@ public class LearnService {
                 .stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
 
-        double avg = mastery.values().stream().mapToDouble(d -> d).average().orElse(0.0);
-        String userLevel = (avg >= 0.75) ? "Advanced" : (avg >= 0.45) ? "Intermediate" : "Beginner";
-
-        int userMaxDifficulty = userLevel.equals("Beginner") ? 1 : userLevel.equals("Intermediate") ? 2 : 3;
-
         Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
                 .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
 
+        int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
+
+        String userLevel = userMaxDifficulty == 3 ? "Advanced"
+                : userMaxDifficulty == 2 ? "Intermediate"
+                        : "Beginner";
         List<Lesson> lessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
 
         var out = lessons.stream().map(l -> {
             LessonProgress p = progressMap.get(l.getId());
             String status = (p == null) ? "not_started" : p.getStatus().name().toLowerCase();
+            int progressPercent = progressForStatus(status);
 
-            int masteryPercent = (int) Math.round(mastery.getOrDefault(l.getCheckpoint(), 0.0) * 100.0);
-
-            boolean locked = l.getDifficulty() > userMaxDifficulty;
+            boolean locked = isLocked(l, status, userMaxDifficulty);
 
             String levelTag = l.getDifficulty() == 1 ? "Beginner"
                     : l.getDifficulty() == 2 ? "Intermediate" : "Advanced";
@@ -366,11 +446,213 @@ public class LearnService {
                     l.getDifficulty(),
                     levelTag,
                     status,
-                    masteryPercent,
-                    locked
-            );
+                    progressPercent,
+                    locked);
         }).toList();
 
         return new AllLessonsResponse(userLevel, out);
+    }
+
+    private boolean isLocked(Lesson lesson, String status, int userMaxDifficulty) {
+        boolean completed = "completed".equals(status);
+        return !completed && lesson.getDifficulty() > userMaxDifficulty;
+    }
+
+    @Transactional
+    public LearnRecommendationsResponse getRecommendations(User user) {
+        ensureMasteryBootstrapped(user);
+
+        Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user)
+                .stream()
+                .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
+
+        Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
+                .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
+        int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
+        List<Checkpoint> orderedWeakAreas = mastery.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue()) // weakest first
+                .map(Map.Entry::getKey)
+                .toList();
+
+        List<Lesson> allLessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
+
+        List<LessonSummaryResponse> recommended = new ArrayList<>();
+
+        for (Checkpoint cp : orderedWeakAreas) {
+            List<Lesson> cpLessons = allLessons.stream()
+                    .filter(l -> l.getCheckpoint() == cp)
+                    .sorted(Comparator.comparingInt(Lesson::getOrderIndex))
+                    .toList();
+
+            for (Lesson l : cpLessons) {
+                LessonProgress p = progressMap.get(l.getId());
+                String status = (p == null) ? "not_started" : p.getStatus().name().toLowerCase();
+
+                boolean completed = "completed".equals(status);
+                boolean locked = !completed && l.getDifficulty() > userMaxDifficulty;
+
+                if (locked || completed)
+                    continue;
+
+                int progressPercent = progressForStatus(status);
+                String levelTag = l.getDifficulty() == 1 ? "Beginner"
+                        : l.getDifficulty() == 2 ? "Intermediate" : "Advanced";
+
+                recommended.add(new LessonSummaryResponse(
+                        l.getId(),
+                        l.getTitle(),
+                        l.getCheckpoint(),
+                        l.getOrderIndex(),
+                        l.getEstimatedMinutes(),
+                        l.getDifficulty(),
+                        levelTag,
+                        status,
+                        progressPercent,
+                        locked));
+
+                if (recommended.size() >= 3)
+                    break;
+            }
+
+            if (recommended.size() >= 3)
+                break;
+        }
+
+        UUID primaryLessonId = recommended.isEmpty() ? null : recommended.get(0).id();
+        Checkpoint primaryCheckpoint = recommended.isEmpty() ? null : recommended.get(0).checkpoint();
+
+        return new LearnRecommendationsResponse(
+                primaryLessonId,
+                primaryCheckpoint,
+                "Recommended from weakest diagnostic/mastery areas",
+                orderedWeakAreas.stream().limit(2).toList(),
+                recommended);
+    }
+
+    // main method to determine the current focus lesson for the user, preferring
+    // in-progress lessons, then recommendations, and applying locking logic based
+    // on mastery and progression
+    @Transactional
+    public LessonSummaryResponse getCurrentFocus(User user) {
+        ensureMasteryBootstrapped(user);
+
+        Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user).stream()
+                .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
+
+        Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
+                .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
+
+        int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
+
+        List<Lesson> lessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
+
+        // prefer an in progress lesson that is still accessible
+        for (Lesson l : lessons) {
+            LessonProgress p = progressMap.get(l.getId());
+            if (p != null && p.getStatus() == LessonStatus.in_progress) {
+                boolean locked = l.getDifficulty() > userMaxDifficulty;
+                if (!locked) {
+                    return mapToSummary(l, p, userMaxDifficulty);
+                }
+            }
+        }
+
+        // fallback to recommendations
+        LearnRecommendationsResponse rec = getRecommendations(user);
+        if (!rec.recommendedLessons().isEmpty()) {
+            return rec.recommendedLessons().get(0);
+        }
+
+        return null;
+    }
+
+    @Transactional
+    public void resetMasteryFromDiagnostic(User user) {
+        DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Diagnostic not completed"));
+
+        Instant now = Instant.now();
+
+        upsertMastery(user, Checkpoint.fundamentals, mapLevel(dr.getFundamentals()), now);
+        upsertMastery(user, Checkpoint.loops, mapLevel(dr.getLoops()), now);
+        upsertMastery(user, Checkpoint.arrays, mapLevel(dr.getArrays()), now);
+        upsertMastery(user, Checkpoint.methods, mapLevel(dr.getMethods()), now);
+        upsertMastery(user, Checkpoint.oop, mapLevel(dr.getOop()), now);
+    }
+
+    private void upsertMastery(User user, Checkpoint checkpoint, double value, Instant now) {
+        Mastery mastery = masteryRepository.findByUserAndCheckpoint(user, checkpoint)
+                .orElseGet(Mastery::new);
+
+        mastery.setUser(user);
+        mastery.setCheckpoint(checkpoint);
+        mastery.setMasteryValue(value);
+        mastery.setUpdatedAt(now);
+
+        masteryRepository.save(mastery);
+    }
+
+    // helper to determine max difficulty unlock based on mastery and progression
+    // (fallback if all the lessons are completed but mastery is low)
+    private int getEffectiveMaxDifficulty(User user, Map<Checkpoint, Double> mastery,
+            Map<UUID, LessonProgress> progressMap) {
+        double avg = mastery.values().stream().mapToDouble(d -> d).average().orElse(0.0);
+
+        int userMaxDifficulty = (avg >= 0.75) ? 3 : (avg >= 0.45) ? 2 : 1;
+
+        List<Lesson> allLessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
+
+        boolean allBeginnerCompleted = allLessons.stream()
+                .filter(l -> l.getDifficulty() == 1)
+                .allMatch(l -> {
+                    LessonProgress p = progressMap.get(l.getId());
+                    return p != null && p.getStatus() == LessonStatus.completed;
+                });
+
+        boolean allIntermediateCompleted = allLessons.stream()
+                .filter(l -> l.getDifficulty() == 2)
+                .allMatch(l -> {
+                    LessonProgress p = progressMap.get(l.getId());
+                    return p != null && p.getStatus() == LessonStatus.completed;
+                });
+
+        // fallback progression unlock
+        if (userMaxDifficulty < 2 && allBeginnerCompleted) {
+            userMaxDifficulty = 2;
+        }
+
+        if (userMaxDifficulty < 3 && allBeginnerCompleted && allIntermediateCompleted) {
+            userMaxDifficulty = 3;
+        }
+
+        return userMaxDifficulty;
+    }
+
+    // helper to map Lesson and Progress to LessonSummaryResponse
+    private LessonSummaryResponse mapToSummary(
+            Lesson lesson,
+            LessonProgress p,
+            int userMaxDifficulty) {
+        String status = (p == null) ? "not_started" : p.getStatus().name().toLowerCase();
+        int progressPercent = progressForStatus(status);
+
+        boolean completed = "completed".equals(status);
+        boolean locked = !completed && lesson.getDifficulty() > userMaxDifficulty;
+
+        String levelTag = lesson.getDifficulty() == 1 ? "Beginner"
+                : lesson.getDifficulty() == 2 ? "Intermediate"
+                        : "Advanced";
+
+        return new LessonSummaryResponse(
+                lesson.getId(),
+                lesson.getTitle(),
+                lesson.getCheckpoint(),
+                lesson.getOrderIndex(),
+                lesson.getEstimatedMinutes(),
+                lesson.getDifficulty(),
+                levelTag,
+                status,
+                progressPercent,
+                locked);
     }
 }

@@ -54,8 +54,16 @@ export type LessonSummary = {
   difficulty: number; // 1..3
   levelTag: UserLevel;
   status: LessonStatus;
-  masteryPercent: number; // 0..100
+  progressPercent: number; // 0..100
   locked: boolean;
+};
+
+export type LearnRecommendationsResponse = {
+  primaryLessonId: string | null;
+  primaryCheckpoint: Checkpoint | null;
+  reason: string;
+  weakAreas: Checkpoint[];
+  recommendedLessons: LessonSummary[];
 };
 
 export type AllLessonsResponse = {
@@ -65,7 +73,7 @@ export type AllLessonsResponse = {
 
 @Injectable({ providedIn: 'root' })
 export class LearnService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getPath(): Observable<LearnPathResponse> {
     return this.http.get<LearnPathResponse>(`${API_BASE_URL}/learn/path`);
@@ -81,5 +89,15 @@ export class LearnService {
 
   submitQuiz(lessonId: string, body: LessonQuizSubmitRequest): Observable<LessonQuizSubmitResponse> {
     return this.http.post<LessonQuizSubmitResponse>(`${API_BASE_URL}/learn/lesson/${lessonId}/quiz/submit`, body);
+  }
+
+  getRecommendations(): Observable<LearnRecommendationsResponse> {
+    return this.http.get<LearnRecommendationsResponse>(
+      `${API_BASE_URL}/learn/recommendations`
+    );
+  }
+
+  getCurrentFocus(): Observable<LessonSummary> {
+    return this.http.get<LessonSummary>(`${API_BASE_URL}/learn/current-focus`);
   }
 }

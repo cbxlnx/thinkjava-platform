@@ -37,7 +37,7 @@ export class RegisterPageComponent {
   }
 
   this.auth.register(email!, password!).subscribe({
-    next: () => this.router.navigate(['/dashboard']), // guard decides
+    next: () => this.router.navigate(['/welcome']),
     error: (e) => (this.error = e?.error ?? 'Registration failed'),
   });
 }

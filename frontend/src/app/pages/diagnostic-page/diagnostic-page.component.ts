@@ -135,7 +135,12 @@ export class DiagnosticPageComponent {
 
   get scorePercent(): number {
     if (!this.resultJson) return 0;
-    const map: Record<string, number> = { Strong: 1, Medium: 0.66, Weak: 0, Unknown: 0 };
+    const map: Record<string, number> = {
+      Strong: 0.85,
+      Medium: 0.60,
+      Weak: 0.30,
+      Unknown: 0.10
+    };
 
     const keys: Checkpoint[] = ['fundamentals', 'loops', 'arrays', 'methods', 'oop'];
     const vals = keys.map((k) => map[this.resultJson?.[k]] ?? 0);
@@ -155,11 +160,11 @@ export class DiagnosticPageComponent {
     return 'Beginner';
   }
 
-
+  // for result details
   get strengths(): string[] {
     if (!this.resultJson) return [];
     const list: string[] = [];
-
+    // show all strong areas, no more than 3 to avoid noise
     if (this.resultJson.fundamentals === 'Strong') list.push('Syntax');
     if (this.resultJson.loops === 'Strong') list.push('Loops');
     if (this.resultJson.arrays === 'Strong') list.push('Arrays');
@@ -168,7 +173,8 @@ export class DiagnosticPageComponent {
 
     return list;
   }
-
+  // if there are weak/unknown areas, show those as "Needs improvement"
+  // Otherwise show medium areas as "Could improve"
   get needsImprovement(): string[] {
     if (!this.resultJson) return [];
 
@@ -219,7 +225,7 @@ export class DiagnosticPageComponent {
     const isCorrect = this.selected === this.currentQuestion.correctOption;
     this.processAnswer(isCorrect);
   }
-
+  
   private processAnswer(isCorrect: boolean) {
     // counts for UI / stopping
     this.answeredCount++;
@@ -508,7 +514,7 @@ export class DiagnosticPageComponent {
     if (currentAdvanced >= minAdvanced) return picked;
 
     const need = minAdvanced - currentAdvanced;
-
+    // find advanced questions in the full pool that weren't picked at all (to avoid removing any already picked advanced ones)
     const advancedCandidates = this.all.filter(
       q => q.difficulty === 3 && !picked.some(p => p.id === q.id)
     );
@@ -533,12 +539,23 @@ export class DiagnosticPageComponent {
 
     return out;
   }
-
+  // counts how many advanced questions were attempted (answered or skipped), used to determine if we can classify someone as advanced
   private advancedAttemptedCount(): number {
     return this.selectedPool.filter(
       q => q.difficulty === 3 && this.answers[q.id] !== undefined
     ).length;
   }
+
+  exitDiagnostic() {
+  if (this.step === 'QUIZ') {
+    const confirmed = window.confirm(
+      'Are you sure you want to leave the assessment? Your current progress will be lost.'
+    );
+    if (!confirmed) return;
+  }
+
+  this.router.navigate(['/dashboard']);
+}
 
 }
 

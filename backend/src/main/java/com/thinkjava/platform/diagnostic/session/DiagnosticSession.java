@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.Instant;
 
+// Entity class representing a diagnostic session for a user
 @Entity
 @Table(name = "diagnostic_sessions")
 @Getter @Setter @NoArgsConstructor
