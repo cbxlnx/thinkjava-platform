@@ -21,12 +21,15 @@ public record LessonResponse(
         QuizDto quiz) {
 
     public record LessonMeta(
-            UUID id,
-            Checkpoint checkpoint,
-            String title,
-            int orderIndex,
-            Integer estimatedMinutes) {
-    }
+        UUID id,
+        Checkpoint checkpoint,
+        String title,
+        int orderIndex,
+        Integer estimatedMinutes,
+        int difficulty, 
+        String levelTag 
+) {
+}
 
     /**
      * Unified lesson block

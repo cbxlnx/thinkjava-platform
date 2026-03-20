@@ -58,15 +58,11 @@
               <h4>{{ lesson.title }}</h4>
               <p>{{ getCheckpointLabel(lesson.checkpoint) }}</p>
 
-              <div class="lesson-progress">
-                <div class="progress-label-row">
-                  <span>Progress</span>
-                  <span>{{ lesson.progressPercent }}%</span>
-                </div>
-                <div class="progress-bar">
-                  <div class="progress-fill" [style.width.%]="lesson.progressPercent"></div>
-                </div>
-              </div>
+              <div class="statusRow">
+  <span class="statusLabel" [ngClass]="'status-' + lesson.status">
+    {{ getStatusLabel(lesson.status) }}
+  </span>
+</div>
 
               <button class="lesson-btn" [routerLink]="['/learn/lesson', lesson.id]">
                 {{ getCtaLabel(lesson) }}
@@ -100,13 +96,12 @@
         <div class="lessonTitle">{{ l.title }}</div>
         <div class="lessonSub">{{ labelForCheckpoint(l.checkpoint) }}</div>
 
-        <div class="barRow">
-          <div class="barLabel">Progress</div>
-          <div class="barValue">{{ l.progressPercent }}%</div>
-        </div>
-        <div class="bar">
-          <div class="barFill" [style.width.%]="l.progressPercent"></div>
-        </div>
+        <div class="statusRow">
+  <span class="statusLabel"
+        [ngClass]="'status-' + l.status">
+    {{ getStatusLabel(l.status) }}
+  </span>
+</div>
 
         <button class="btn wide">Review</button>
       </div>
@@ -124,13 +119,11 @@
         <div class="lessonTitle">{{ l.title }}</div>
         <div class="lessonSub">{{ labelForCheckpoint(l.checkpoint) }}</div>
 
-        <div class="barRow">
-          <div class="barLabel">Progress</div>
-          <div class="barValue">{{ l.progressPercent }}%</div>
-        </div>
-        <div class="bar">
-          <div class="barFill" [style.width.%]="l.progressPercent"></div>
-        </div>
+       <div class="statusRow">
+  <span class="statusLabel" [ngClass]="'status-' + l.status">
+    {{ getStatusLabel(l.status) }}
+  </span>
+</div>
 
         <button class="btn primary wide">Continue</button>
       </div>
@@ -152,13 +145,11 @@
         <div class="lessonTitle">{{ l.title }}</div>
         <div class="lessonSub">{{ labelForCheckpoint(l.checkpoint) }}</div>
 
-        <div class="barRow">
-          <div class="barLabel">Progress</div>
-          <div class="barValue">{{ l.progressPercent }}%</div>
-        </div>
-        <div class="bar">
-          <div class="barFill" [style.width.%]="l.progressPercent"></div>
-        </div>
+       <div class="statusRow">
+  <span class="statusLabel" [ngClass]="'status-' + l.status">
+    {{ getStatusLabel(l.status) }}
+  </span>
+</div>
 
         <button class="btn wide" [disabled]="l.locked">{{ l.locked ? 'Locked' : 'Start' }}</button>
       </div>

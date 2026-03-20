@@ -16,6 +16,18 @@ import {
 type Step = 'INTRO' | 'QUIZ' | 'RESULT';
 type AnswerOrSkip = AnswerOption | 'SKIP';
 
+type ReviewItem = {
+  id: number;
+  prompt: string;
+  checkpoint: Checkpoint;
+  difficulty: Difficulty;
+  selectedAnswer: AnswerOrSkip | null;
+  correctAnswer: AnswerOption;
+  selectedText: string;
+  correctText: string;
+  isSkipped: boolean;
+};
+
 // selects a balanced set of questions
 // adapts difficulty within each topic
 // skips topics if the learner struggles
@@ -56,6 +68,9 @@ export class DiagnosticPageComponent {
 
   answers: Record<number, AnswerOrSkip> = {};
 
+  reviewItems: ReviewItem[] = [];
+  showReview = false;
+
   answeredCount = 0;
   totalQuestionsPlanned = MAX_QUESTIONS;
 
@@ -79,6 +94,9 @@ export class DiagnosticPageComponent {
     this.globalWrongStreak = 0;
 
     this.currentCheckpointIndex = 0;
+
+    this.reviewItems = [];
+    this.showReview = false;
     this.resetCheckpointState();
 
     // build the quiz: proportioned selection (2 per topic by default)
@@ -134,20 +152,20 @@ export class DiagnosticPageComponent {
   }
 
   get scorePercent(): number {
-    if (!this.resultJson) return 0;
-    const map: Record<string, number> = {
-      Strong: 0.85,
-      Medium: 0.60,
-      Weak: 0.30,
-      Unknown: 0.10
-    };
+  const attempted = Object.keys(this.answers).length;
+  if (!attempted) return 0;
 
-    const keys: Checkpoint[] = ['fundamentals', 'loops', 'arrays', 'methods', 'oop'];
-    const vals = keys.map((k) => map[this.resultJson?.[k]] ?? 0);
+  let correct = 0;
 
-    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-    return Math.round(avg * 100);
+  for (const q of this.selectedPool) {
+    const given = this.answers[q.id];
+    if (given !== 'SKIP' && given === q.correctOption) {
+      correct++;
+    }
   }
+
+  return Math.round((correct / attempted) * 100);
+}
 
   get overallLevel(): string {
     const p = this.scorePercent;
@@ -329,57 +347,58 @@ export class DiagnosticPageComponent {
   // SUBMIT / SCORE
   // ---------------------------
   submit() {
-    const stats: Record<string, { correct: number; total: number }> = {};
+  const stats: Record<string, { correct: number; total: number }> = {};
 
-    // score only answered questions from selected pool (including SKIP)
-    for (const q of this.selectedPool) {
-      const given = this.answers[q.id];
-      if (given === undefined) continue; // not answered at all
+  for (const q of this.selectedPool) {
+    const given = this.answers[q.id];
+    if (given === undefined) continue;
 
-      if (!stats[q.checkpoint]) stats[q.checkpoint] = { correct: 0, total: 0 };
-      stats[q.checkpoint].total++;
+    if (!stats[q.checkpoint]) stats[q.checkpoint] = { correct: 0, total: 0 };
+    stats[q.checkpoint].total++;
 
-      // SKIP counts as incorrect, so only count correct when it's not SKIP and matches
-      if (given !== 'SKIP' && given === q.correctOption) {
-        stats[q.checkpoint].correct++;
-      }
+    if (given !== 'SKIP' && given === q.correctOption) {
+      stats[q.checkpoint].correct++;
     }
-
-    const level = (cp: string) => {
-      const s = stats[cp];
-      if (!s || s.total === 0) return 'Unknown';
-      const r = s.correct / s.total;
-
-      if (r >= 0.8) return 'Strong';
-      if (r >= 0.45) return 'Medium';
-      return 'Weak';
-    };
-
-    const levels = {
-      fundamentals: level('fundamentals'),
-      loops: level('loops'),
-      arrays: level('arrays'),
-      methods: level('methods'),
-      oop: level('oop'),
-    };
-
-    const payload = {
-      ...levels,
-      startModule: this.pickStartModule(levels),
-    };
-
-    this.diagnostic.complete(payload).subscribe({
-      next: (res) => {
-        this.resultJson = res;
-        this.step = 'RESULT';
-      },
-      error: () => {
-        // show something still
-        this.resultJson = { ...payload, error: 'Failed to save result' };
-        this.step = 'RESULT';
-      },
-    });
   }
+
+  const level = (cp: string) => {
+    const s = stats[cp];
+    if (!s || s.total === 0) return 'Unknown';
+    const r = s.correct / s.total;
+
+    if (r >= 0.8) return 'Strong';
+    if (r >= 0.45) return 'Medium';
+    return 'Weak';
+  };
+
+  const levels = {
+    fundamentals: level('fundamentals'),
+    loops: level('loops'),
+    arrays: level('arrays'),
+    methods: level('methods'),
+    oop: level('oop'),
+  };
+
+  const payload = {
+    ...levels,
+    startModule: this.pickStartModule(levels),
+  };
+
+  this.diagnostic.complete(payload).subscribe({
+    next: (res) => {
+      this.resultJson = res;
+      this.reviewItems = this.buildReviewItems();
+      this.showReview = false;
+      this.step = 'RESULT';
+    },
+    error: () => {
+      this.resultJson = { ...payload, error: 'Failed to save result' };
+      this.reviewItems = this.buildReviewItems();
+      this.showReview = false;
+      this.step = 'RESULT';
+    },
+  });
+}
 
 
   pickStartModule(levels: Record<string, string>) {
@@ -414,6 +433,9 @@ export class DiagnosticPageComponent {
     this.totalQuestionsPlanned = MAX_QUESTIONS;
 
     this.currentCheckpointIndex = 0;
+
+    this.reviewItems = [];
+  this.showReview = false;
     this.resetCheckpointState();
   }
 
@@ -555,6 +577,43 @@ export class DiagnosticPageComponent {
   }
 
   this.router.navigate(['/dashboard']);
+}
+
+private buildReviewItems(): ReviewItem[] {
+  return this.selectedPool
+    .filter((q) => {
+      const given = this.answers[q.id];
+      return given !== undefined && given !== q.correctOption;
+    })
+    .map((q) => {
+      const given = this.answers[q.id];
+
+      return {
+        id: q.id,
+        prompt: q.prompt,
+        checkpoint: q.checkpoint,
+        difficulty: q.difficulty,
+        selectedAnswer: given ?? null,
+        correctAnswer: q.correctOption,
+        selectedText: this.getAnswerText(q, given),
+        correctText: this.getAnswerText(q, q.correctOption),
+        isSkipped: given === 'SKIP',
+      };
+    });
+}
+
+private getAnswerText(q: Question, answer: AnswerOption | 'SKIP' | undefined): string {
+  if (!answer) return 'No answer';
+  if (answer === 'SKIP') return 'Skipped';
+
+  const optionMap: Record<AnswerOption, string> = {
+    A: q.optionA,
+    B: q.optionB,
+    C: q.optionC,
+    D: q.optionD,
+  };
+
+  return `${answer}: ${optionMap[answer]}`;
 }
 
 }

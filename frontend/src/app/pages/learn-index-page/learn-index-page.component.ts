@@ -183,6 +183,16 @@ get upcomingLessons(): LessonSummary[] {
     return map[cp] ?? cp;
   }
 
+  getStatusLabel(status: string): string {
+  switch (status) {
+    case 'completed':
+      return 'Completed';
+    case 'in_progress':
+      return 'In progress';
+    default:
+      return 'Not started';
+  }
+}
 
   
 }
