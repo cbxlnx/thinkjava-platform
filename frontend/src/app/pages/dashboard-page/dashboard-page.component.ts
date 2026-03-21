@@ -24,11 +24,6 @@ type DiagnosticResult = {
   startModule?: Checkpoint;
 };
 
-type MeResponse = {
-  email: string;
-  firstName: string | null;
-};
-
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
@@ -346,16 +341,39 @@ System.out.println(scores[0]);`;
   }
   // For the checkpoint mastery bars on the dashboard
   get checkpointMasteryItems(): { key: string; label: string; value: number }[] {
-    const cp = this.dashboardSummary?.checkpointMastery ?? {};
+  const cp = this.dashboardSummary?.checkpointMastery ?? {};
 
-    return [
-      { key: 'fundamentals', label: 'Fundamentals', value: cp['fundamentals'] ?? 0 },
-      { key: 'loops', label: 'Loops', value: cp['loops'] ?? 0 },
-      { key: 'arrays', label: 'Arrays', value: cp['arrays'] ?? 0 },
-      { key: 'methods', label: 'Methods', value: cp['methods'] ?? 0 },
-      { key: 'oop', label: 'OOP', value: cp['oop'] ?? 0 },
-    ];
+  return [
+    { key: 'fundamentals', label: 'Fundamentals', value: this.clampPercent(cp['fundamentals']) },
+    { key: 'loops', label: 'Loops', value: this.clampPercent(cp['loops']) },
+    { key: 'arrays', label: 'Arrays', value: this.clampPercent(cp['arrays']) },
+    { key: 'methods', label: 'Methods', value: this.clampPercent(cp['methods']) },
+    { key: 'oop', label: 'OOP', value: this.clampPercent(cp['oop']) },
+  ];
+}
+
+get chartLinePoints(): string {
+  const items = this.checkpointMasteryItems;
+  const height = 320;
+  const width = 500;
+
+  if (!items || items.length === 0) {
+    return '';
   }
+
+  const step = width / (items.length - 1);
+
+  return items
+    .map((item, index) => {
+      const x = index * step;
+      const y = height - (item.value / 100) * height;
+      return `${x},${y}`;
+    })
+    .join(' ');
+}
+private clampPercent(value: number | null | undefined): number {
+  return Math.max(0, Math.min(100, Math.round(value ?? 0)));
+}
   // For the overall course progress circle on the dashboard - could be based on
   //  number of lessons completed vs total, or could be an average of checkpoint mastery percentages
   private calculateCourseProgress(lessons: any[]): void {

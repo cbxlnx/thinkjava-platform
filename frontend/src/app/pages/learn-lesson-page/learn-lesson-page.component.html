@@ -10,10 +10,17 @@
     <!-- HERO -->
     <header class="hero">
       <div class="hero-inner">
-        <span class="module-pill">Java Fundamentals • Module 2</span>
-        <h1 class="hero-title">{{ data.lesson.title }}</h1>
+
+        <span class="module-pill">
+          {{ data.lesson.levelTag }}
+        </span>
+
+        <h1 class="hero-title">
+          {{ data.lesson.title }}
+        </h1>
+
         <p class="hero-sub">
-          Introduction to variables, primitive types, reference types, and type conversion in Java.
+          {{ heroSub }}
         </p>
 
         <div class="meta">
@@ -21,6 +28,7 @@
           <span class="dot">•</span>
           <span>Est. {{ data.lesson.estimatedMinutes }} min</span>
         </div>
+
       </div>
     </header>
     <div class="back-row">
@@ -198,7 +206,7 @@
                       <div class="casting-divider" *ngIf="!it.hideDivider"></div>
                     </ng-container>
 
-                    <!-- optional warning -->
+                    <!-- warning -->
                     <div class="casting-warn" *ngIf="b.payloadObj?.left?.warning">
                       <div class="warn-row">
                         <span class="warn-icon">⚠</span>
@@ -206,7 +214,7 @@
                       </div>
                     </div>
 
-                    <!-- optional callout (tip card style) -->
+                    <!--  callout (tip card style) -->
                     <div class="casting-callout" *ngIf="b.payloadObj?.left?.callout">
                       <div class="warn-row">
                         <span class="warn-icon">{{ b.payloadObj?.left?.callout?.icon || 'i' }}</span>
@@ -329,65 +337,67 @@
           </button>
 
           <div class="result" *ngIf="submitResult">
-  <div class="result-row">
-    <span class="badge" [class.good]="submitResult.passed" [class.bad]="!submitResult.passed">
-      {{ submitResult.passed ? 'Passed' : 'Not passed' }}
-    </span>
+            <div class="result-row">
+              <span class="badge" [class.good]="submitResult.passed" [class.bad]="!submitResult.passed">
+                {{ submitResult.passed ? 'Passed' : 'Not passed' }}
+              </span>
 
-    <span class="muted">
-      Score: {{ (submitResult.score * 100) | number:'1.0-0' }}%
-    </span>
-  </div>
+              <span class="muted">
+                Score: {{ (submitResult.score * 100) | number:'1.0-0' }}%
+              </span>
+            </div>
 
-  <div class="result-actions" *ngIf="submitResult.passed">
-    <button class="secondary" (click)="goNext()" [disabled]="!submitResult.nextId">
-      Continue to Next Lesson
-    </button>
+            <div class="result-actions" *ngIf="submitResult.passed">
+              <button class="secondary" (click)="goNext()" [disabled]="!submitResult.nextId">
+                Continue to Next Lesson
+              </button>
 
-    <button class="secondary outline" [routerLink]="['/dashboard']">
-      Back to Dashboard
-    </button>
-  </div>
+              <button class="secondary outline" [routerLink]="['/dashboard']">
+                Back to Dashboard
+              </button>
+            </div>
 
-  <div class="post-quiz-recs" *ngIf="submitResult.passed">
-    <h3 class="post-quiz-title">Recommended next lessons</h3>
-    <p class="hint small">Choose what you want to study next.</p>
+            <div class="post-quiz-recs" *ngIf="submitResult.passed">
+              <h3 class="post-quiz-title">Recommended next lessons</h3>
+              <p class="hint small">Choose what you want to study next.</p>
 
-    <div *ngIf="loadingPostQuizRecommendations" class="hint small">
-      Loading recommendations...
-    </div>
+              <div *ngIf="loadingPostQuizRecommendations" class="hint small">
+                Loading recommendations...
+              </div>
 
-    <div class="post-quiz-grid" *ngIf="!loadingPostQuizRecommendations && postQuizRecommendations.length">
-      <div class="post-quiz-card" *ngFor="let lesson of postQuizRecommendations">
-        <div class="post-quiz-card-top">
-          <span class="post-quiz-pill">{{ lesson.levelTag }}</span>
-          <span class="post-quiz-time">⏱ {{ lesson.estimatedMinutes }} min</span>
-        </div>
+              <div class="post-quiz-grid" *ngIf="!loadingPostQuizRecommendations && postQuizRecommendations.length">
+                <div class="post-quiz-card" *ngFor="let lesson of postQuizRecommendations">
+                  <div class="post-quiz-card-top">
+                    <span class="post-quiz-pill">{{ lesson.levelTag }}</span>
+                    <span class="post-quiz-time">⏱ {{ lesson.estimatedMinutes }} min</span>
+                  </div>
 
-        <div class="post-quiz-card-title">{{ lesson.title }}</div>
-        <div class="post-quiz-card-sub">{{ lesson.checkpoint }}</div>
+                  <div class="post-quiz-card-title">{{ lesson.title }}</div>
+                  <div class="post-quiz-card-sub">{{ lesson.checkpoint }}</div>
 
-        <button class="secondary" [routerLink]="['/learn/lesson', lesson.id]">
-          Open Lesson
-        </button>
-      </div>
-    </div>
+                  <button class="secondary" [routerLink]="['/learn/lesson', lesson.id]">
+                    Open Lesson
+                  </button>
+                </div>
+              </div>
 
-    <div *ngIf="!loadingPostQuizRecommendations && !postQuizRecommendations.length" class="hint small">
-      No additional recommendations available right now.
-    </div>
-  </div>
+              <div *ngIf="!loadingPostQuizRecommendations && !postQuizRecommendations.length" class="hint small">
+                No additional recommendations available right now.
+              </div>
+            </div>
 
-  <div class="hint small" *ngIf="!submitResult.passed">
-    Review the lesson and try again.
-  </div>
-</div>
+            <div class="hint small" *ngIf="!submitResult.passed">
+              Review the lesson and try again.
+            </div>
+          </div>
         </section>
       </main>
 
       <!-- SIDEBAR -->
       <aside class="side">
-        <div class="tutor">
+        <app-ai-tutor [lessonId]="lessonId" [topicLabel]="data?.lesson?.checkpoint ?? ''">
+        </app-ai-tutor>
+        <!-- <div class="tutor">
           <div class="tutor-title">AI Tutor</div>
           <div class="tutor-sub">Need help understanding this lesson?</div>
 
@@ -397,13 +407,42 @@
             <button class="chip-btn" type="button">Explain my error</button>
           </div>
 
-          <div class="tutor-bubble">
+           <div class="tutor-bubble">
             Hi! I’m here to help you with <b>{{ data.lesson.checkpoint }}</b>.
           </div>
 
           <input class="tutor-input" placeholder="Ask Tutor about this topic…" disabled />
-          <div class="hint small">Tutor is a future feature (pgvector).</div>
-        </div>
+          <div class="hint small">Tutor is a future feature (pgvector).</div> -->
+
+          <!-- <div class="tutor-bubble">
+            Hi! I’m here to help you with <b>{{ data.lesson.checkpoint }}</b>.
+          </div>
+
+          <div class="tutor-ask-row">
+            <input class="tutor-input" [(ngModel)]="tutorQuestion" placeholder="Ask Tutor about this topic…"
+              (keyup.enter)="askTutor()" />
+
+            <button class="primary tutor-send" type="button" (click)="askTutor()" [disabled]="tutorLoading">
+              {{ tutorLoading ? '...' : 'Ask' }}
+            </button>
+          </div>
+
+          <div class="hint small" *ngIf="tutorLoading">Searching lesson context...</div>
+          <div class="error small" *ngIf="tutorError">{{ tutorError }}</div>
+          
+          <div class="tutor-answer" *ngIf="tutorAnswer">
+            <b>Answer:</b>
+            <div>{{ tutorAnswer }}</div>
+          </div>
+          
+          <div class="tutor-results" *ngIf="tutorMatches.length">
+            <div class="tutor-result-card" *ngFor="let m of tutorMatches">
+              <div><b>Section:</b> {{ m.sectionOrder }}</div>
+              <div><b>Type:</b> {{ m.type }}</div>
+              <div><b>Similarity:</b> {{ m.similarity | number:'1.2-3' }}</div>
+            </div>
+          </div>
+        </div> --> 
       </aside>
     </div>
   </ng-container>

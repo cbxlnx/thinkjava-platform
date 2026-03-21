@@ -134,7 +134,7 @@
       </section>
       <section class="card checkpoint-card" *ngIf="checkpointProgressItems.length">
         <div class="card-head split">
-          <div class="card-title">Topic Progress</div>
+          <div class="card-title">Lessons Progress</div>
           <div class="card-sub">Lessons completed in each topic</div>
         </div>
 
@@ -152,6 +152,53 @@
         </div>
       </section>
 
+      <section class="mastery-graph-card">
+  <div class="mastery-graph-header">
+    <div>
+      <h3>Topic Progress</h3>
+      <p>See how strong your understanding is across core Java topics.</p>
+    </div>
+
+    <div class="mastery-overall">
+      <span class="mastery-overall-value">{{ masteryPercent }}%</span>
+      <span class="mastery-overall-label">{{ masteryLabel }}</span>
+    </div>
+  </div>
+
+  <div class="mastery-combo-chart">
+    <div class="chart-grid">
+      <div class="chart-grid-line line-100"><span>100%</span></div>
+      <div class="chart-grid-line line-75"><span>75%</span></div>
+      <div class="chart-grid-line line-50"><span>50%</span></div>
+      <div class="chart-grid-line line-25"><span>25%</span></div>
+      <div class="chart-grid-line line-0"><span>0%</span></div>
+    </div>
+
+    <svg class="chart-line-layer" viewBox="0 0 500 320" preserveAspectRatio="none">
+  <polyline
+    [attr.points]="chartLinePoints"
+    class="chart-line">
+  </polyline>
+</svg>
+    <div class="chart-columns">
+      <div class="chart-column" *ngFor="let topic of checkpointMasteryItems">
+        <div class="chart-value">{{ topic.value }}%</div>
+
+        <div class="chart-bar-wrap">
+          <div class="chart-bar-track">
+            <div
+              class="chart-bar-fill"
+              [ngClass]="'bar-' + topic.key"
+              [style.height.%]="topic.value">
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-label">{{ topic.label }}</div>
+      </div>
+    </div>
+  </div>
+</section>
       <!-- Recent Activity -->
       <section class="card activity">
         <div class="card-head split">

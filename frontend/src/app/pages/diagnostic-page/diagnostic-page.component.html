@@ -103,7 +103,7 @@
           </button>
 
           <button class="btn primary" (click)="next()" [disabled]="!selected">
-            {{ isLastQuestion ? 'Finish' : 'Next Question' }} 
+            {{ isLastQuestion ? 'Finish' : 'Next Question' }}
           </button>
         </div>
       </div>
@@ -183,9 +183,13 @@
           </div>
         </div>
 
-        <div class="actions">
-          <button class="btn primary" (click)="viewPath()">Start learning </button>
+        <div class="actions" [class.three]="reviewItems.length > 0" [class.two]="reviewItems.length === 0">
+          <button class="btn primary" (click)="viewPath()">Start learning</button>
           <button class="btn ghost" (click)="retake()">Retake assessment</button>
+          <button class="btn ghost review-btn" type="button" *ngIf="reviewItems.length > 0"
+            (click)="showReview = !showReview">
+            {{ showReview ? 'Hide answer review' : 'Review wrong answers' }}
+          </button>
         </div>
       </div>
 
@@ -195,6 +199,44 @@
           <div class="ai-title">Recommendation</div>
           <div class="ai-text">
             Start with <b>{{ resultJson?.startModule }}</b> to reinforce your weakest area first.
+          </div>
+        </div>
+      </div>
+
+      <div class="review-wrap" *ngIf="step === 'RESULT' && showReview">
+        <div class="review-card">
+          <div class="review-head">
+            <h3>Answer review</h3>
+            <p>Take a look at the questions you missed and the correct answers.</p>
+          </div>
+
+          <div class="review-list" *ngIf="reviewItems.length > 0">
+            <div class="review-item" *ngFor="let item of reviewItems">
+              <div class="review-meta">
+                <span class="pill small">{{ item.checkpoint }}</span>
+                <span class="pill small alt">
+                  {{
+                  item.difficulty === 1 ? 'Beginner' :
+                  item.difficulty === 2 ? 'Intermediate' : 'Advanced'
+                  }}
+                </span>
+              </div>
+
+              <div class="review-question">
+                <pre *ngIf="item.prompt.includes(';') || item.prompt.includes('{')"><code>{{ item.prompt }}</code></pre>
+                <p *ngIf="!(item.prompt.includes(';') || item.prompt.includes('{'))">{{ item.prompt }}</p>
+              </div>
+
+              <div class="review-answer wrong">
+                <strong>Your answer:</strong> {{ item.selectedText }}
+              </div>
+
+              <div class="review-answer correct">
+                <strong>Correct answer:</strong> {{ item.correctText }}
+              </div>
+
+
+            </div>
           </div>
         </div>
       </div>

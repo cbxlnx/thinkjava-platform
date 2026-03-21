@@ -1,6 +1,7 @@
 package com.thinkjava.platform.learn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkjava.platform.diagnostic.result.DiagnosticResult;
 import com.thinkjava.platform.diagnostic.result.DiagnosticResultRepository;
@@ -28,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.thinkjava.platform.learn.section.LessonSemanticSearchService;
 
 import java.time.Instant;
 import java.util.*;
@@ -53,7 +55,8 @@ public class LearnService {
             LessonQuizQuestionRepository quizRepository,
             LessonProgressRepository progressRepository,
             MasteryRepository masteryRepository,
-            DiagnosticResultRepository diagnosticRepository) {
+            DiagnosticResultRepository diagnosticRepository,
+            LessonSemanticSearchService semanticSearchService) {
         this.lessonRepository = lessonRepository;
         this.blockRepository = blockRepository;
         this.quizRepository = quizRepository;
@@ -156,7 +159,6 @@ public class LearnService {
 
         // load blocks ordered by section_order (mapped as orderIndex in LessonBlock)
         List<LessonBlock> blocks = blockRepository.findByLessonIdOrderByOrderIndexAsc(lessonId);
-
         List<LessonResponse.BlockDto> blockDtos = blocks.stream()
                 .map(b -> new LessonResponse.BlockDto(
                         b.getOrderIndex(),
@@ -183,7 +185,9 @@ public class LearnService {
                         lesson.getCheckpoint(),
                         lesson.getTitle(),
                         lesson.getOrderIndex(),
-                        lesson.getEstimatedMinutes()),
+                        lesson.getEstimatedMinutes(),
+                        lesson.getDifficulty(),
+                        mapLevelTag(lesson.getDifficulty())),
                 blockDtos,
                 new LessonResponse.QuizDto(quizQuestions));
     }
@@ -275,10 +279,28 @@ public class LearnService {
     // helper to parse correct answer JSON (could be string or more complex
     // structure)
     private String parseCorrect(String correctJson) {
+        if (correctJson == null || correctJson.isBlank()) {
+            return null;
+        }
+
         try {
-            return objectMapper.readValue(correctJson, String.class);
-        } catch (Exception e) {
+            JsonNode node = objectMapper.readTree(correctJson);
+
+            // Case 1: ["answer"]
+            if (node.isArray() && node.size() > 0) {
+                return node.get(0).asText();
+            }
+
+            // Case 2: "answer"
+            if (node.isTextual()) {
+                return node.asText();
+            }
+
+            // Fallback for anything unexpected
             return correctJson;
+        } catch (Exception e) {
+            // If it's plain text rather than JSON
+            return correctJson.replace("\"", "").trim();
         }
     }
 
@@ -289,66 +311,80 @@ public class LearnService {
     // method to recompute mastery for a checkpoint based on diagnostic baseline and
     // lesson completion ratio, and update the Mastery entity
     private double recomputeCheckpointMastery(User user, Checkpoint checkpoint) {
-    DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId()).orElseThrow();
+        DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Diagnostic not completed"));
 
-    double baseline = switch (checkpoint) {
-        case fundamentals -> mapLevel(dr.getFundamentals());
-        case loops -> mapLevel(dr.getLoops());
-        case arrays -> mapLevel(dr.getArrays());
-        case methods -> mapLevel(dr.getMethods());
-        case oop -> mapLevel(dr.getOop());
-    };
+        double baseline = switch (checkpoint) {
+            case fundamentals -> mapLevel(dr.getFundamentals());
+            case loops -> mapLevel(dr.getLoops());
+            case arrays -> mapLevel(dr.getArrays());
+            case methods -> mapLevel(dr.getMethods());
+            case oop -> mapLevel(dr.getOop());
+        };
 
-    List<Lesson> checkpointLessons = lessonRepository
-            .findByActiveTrueOrderByCheckpointAscOrderIndexAsc()
-            .stream()
-            .filter(l -> l.getCheckpoint() == checkpoint)
-            .toList();
+        List<Lesson> checkpointLessons = lessonRepository
+                .findByActiveTrueOrderByCheckpointAscOrderIndexAsc()
+                .stream()
+                .filter(l -> l.getCheckpoint() == checkpoint)
+                .toList();
 
-    Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user)
-            .stream()
-            .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
+        Mastery m = masteryRepository.findByUserAndCheckpoint(user, checkpoint)
+                .orElseGet(Mastery::new);
 
-    long completed = checkpointLessons.stream()
-            .filter(l -> {
-                LessonProgress p = progressMap.get(l.getId());
-                return p != null && p.getStatus() == LessonStatus.completed;
-            })
-            .count();
+        m.setUser(user);
+        m.setCheckpoint(checkpoint);
 
-    Mastery m = masteryRepository.findByUserAndCheckpoint(user, checkpoint)
-            .orElseGet(Mastery::new);
+        double mastery;
 
-    m.setUser(user);
-    m.setCheckpoint(checkpoint);
+        if (checkpointLessons.isEmpty()) {
+            mastery = baseline;
+        } else {
+            Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user)
+                    .stream()
+                    .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
 
-    double mastery;
+            long completedCount = checkpointLessons.stream()
+                    .filter(l -> {
+                        LessonProgress p = progressMap.get(l.getId());
+                        return p != null && p.getStatus() == LessonStatus.completed;
+                    })
+                    .count();
 
-    // no lessons in this checkpoint -> keep baseline
-    if (checkpointLessons.isEmpty()) {
-        mastery = baseline;
+            double completionRatio = (double) completedCount / checkpointLessons.size();
+
+            List<Double> checkpointQuizScores = checkpointLessons.stream()
+                    .map(l -> progressMap.get(l.getId()))
+                    .filter(Objects::nonNull)
+                    .map(LessonProgress::getBestQuizScore)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            double avgQuizScore = checkpointQuizScores.isEmpty()
+                    ? 0.0
+                    : checkpointQuizScores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+
+            double progressScore = (0.5 * completionRatio) + (0.5 * avgQuizScore);
+
+            mastery = baseline + ((1.0 - baseline) * progressScore);
+        }
+
+        mastery = clamp(mastery, 0.0, 1.0);
+
+        m.setMasteryValue(mastery);
+        m.setUpdatedAt(Instant.now());
+        masteryRepository.save(m);
+
+        return mastery;
     }
-    // checkpoint fully completed -> boost mastery
-    else if (completed == checkpointLessons.size()) {
-        mastery = Math.max(baseline, 0.85);
-    }
-    // checkpoint NOT fully completed -> keep current stored mastery (or baseline if missing)
-    else {
-        Double currentMastery = m.getMasteryValue();
-        mastery = (currentMastery != null) ? currentMastery : baseline;
-    }
-
-    mastery = clamp(mastery, 0.0, 1.0);
-
-    m.setMasteryValue(mastery);
-    m.setUpdatedAt(Instant.now());
-    masteryRepository.save(m);
-
-    return mastery;
-}
 
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
+    }
+
+    private String mapLevelTag(int difficulty) {
+        return difficulty == 1 ? "Beginner"
+                : difficulty == 2 ? "Intermediate"
+                        : "Advanced";
     }
 
     @Transactional
@@ -388,13 +424,14 @@ public class LearnService {
 
     private double mapLevel(String level) {
         if (level == null)
-            return 0.10;
+            return 0.0;
+
         return switch (level) {
-            case "Strong" -> 0.85;
-            case "Medium" -> 0.60;
-            case "Weak" -> 0.30;
-            case "Unknown" -> 0.10;
-            default -> 0.10;
+            case "Strong" -> 0.75;
+            case "Medium" -> 0.50;
+            case "Weak" -> 0.25;
+            case "Unknown" -> 0.0;
+            default -> 0.0;
         };
     }
 
