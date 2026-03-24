@@ -54,8 +54,11 @@ public class TutorService {
                 })
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.joining("\n\n---\n\n"));
+        String lessonTitle = blocks.isEmpty()
+                ? "this lesson"
+                : blocks.get(0).getLesson().getTitle();
 
-        String answer = openAiChatService.askTutor(question, context);
+        String answer = openAiChatService.askTutor(question, context, lessonTitle);
 
         List<TutorSearchResultDto> matches = results.stream()
                 .map(r -> new TutorSearchResultDto(
