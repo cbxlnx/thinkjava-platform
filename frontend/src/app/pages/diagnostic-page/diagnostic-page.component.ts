@@ -382,6 +382,7 @@ export class DiagnosticPageComponent {
   const payload = {
     ...levels,
     startModule: this.pickStartModule(levels),
+    diagnosticPercent: this.scorePercent,
   };
 
   this.diagnostic.complete(payload).subscribe({

@@ -15,4 +15,5 @@ public class DiagnosticResultResponse {
   private String oop;
   private String startModule;
   private Instant completedAt;
+  private Integer diagnosticPercent;
 }

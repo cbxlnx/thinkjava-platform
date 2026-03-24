@@ -15,12 +15,14 @@ export type LessonBlockType =
 
 export interface LessonResponse {
   lesson: {
-    id: string;
-    checkpoint: string;
-    title: string;
-    orderIndex: number;
-    estimatedMinutes: number | null;
-  };
+  id: string;
+  checkpoint: Checkpoint; 
+  title: string;
+  orderIndex: number;
+  estimatedMinutes: number | null;
+  difficulty: number;
+  levelTag: LearnTier; 
+};
 
   blocks: Array<{
     order: number;

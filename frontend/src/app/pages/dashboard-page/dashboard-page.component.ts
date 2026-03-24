@@ -22,6 +22,7 @@ type DiagnosticResult = {
   methods: Level;
   oop: Level;
   startModule?: Checkpoint;
+  diagnosticPercent?: number;
 };
 
 @Component({
@@ -276,6 +277,14 @@ export class DashboardPageComponent implements OnInit {
     return (this.recommendations?.weakAreas ?? [])
       .map(area => this.getCheckpointLabel(area))
       .join(', ');
+  }
+  get diagnosticScorePercent(): number | null {
+    const value = this.diag?.diagnosticPercent;
+    return typeof value === 'number' ? this.clampPercent(value) : null;
+  }
+
+  get hasDiagnosticScore(): boolean {
+    return this.diagnosticScorePercent !== null;
   }
 
   // -----------------------------

@@ -217,7 +217,14 @@
                     <!--  callout (tip card style) -->
                     <div class="casting-callout" *ngIf="b.payloadObj?.left?.callout">
                       <div class="warn-row">
-                        <span class="warn-icon">{{ b.payloadObj?.left?.callout?.icon || 'i' }}</span>
+                        <span class="warn-icon">
+                          {{
+                          b.payloadObj?.left?.callout?.icon &&
+                          b.payloadObj?.left?.callout?.icon !== '????'
+                          ? b.payloadObj?.left?.callout?.icon
+                          : '✦'
+                          }}
+                        </span>
                         <span class="warn-text" [innerHTML]="b.payloadObj?.left?.callout?.html"></span>
                       </div>
                       <span class="chip" *ngIf="b.payloadObj?.left?.callout?.chip">
@@ -414,7 +421,7 @@
           <input class="tutor-input" placeholder="Ask Tutor about this topic…" disabled />
           <div class="hint small">Tutor is a future feature (pgvector).</div> -->
 
-          <!-- <div class="tutor-bubble">
+        <!-- <div class="tutor-bubble">
             Hi! I’m here to help you with <b>{{ data.lesson.checkpoint }}</b>.
           </div>
 
@@ -442,7 +449,7 @@
               <div><b>Similarity:</b> {{ m.similarity | number:'1.2-3' }}</div>
             </div>
           </div>
-        </div> --> 
+        </div> -->
       </aside>
     </div>
   </ng-container>

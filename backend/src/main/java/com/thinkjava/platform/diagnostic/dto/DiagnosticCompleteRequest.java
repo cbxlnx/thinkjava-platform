@@ -11,4 +11,5 @@ public class DiagnosticCompleteRequest {
   private String methods;
   private String oop;
   private String startModule;  // fundamentals|loops|arrays|methods|oop|advanced
+  private Integer diagnosticPercent;
 }

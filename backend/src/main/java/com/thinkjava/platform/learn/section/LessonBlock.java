@@ -39,6 +39,12 @@ public class LessonBlock {
   @Column(columnDefinition = "jsonb")
   private  String payload;
 
+  @Column(name = "embedding_text", columnDefinition = "text")
+  private String embeddingText;
+
+  @Column(name = "embedding", columnDefinition = "vector(1536)")
+  private String embedding;
+
   public LessonBlock() {
   }
 
@@ -105,4 +111,21 @@ public class LessonBlock {
   public void setPayload( String payload) {
     this.payload = payload;
   }
+
+  public String getEmbeddingText() {
+    return embeddingText;
+  }
+
+  public void setEmbeddingText(String embeddingText) {
+    this.embeddingText = embeddingText;
+  }
+
+  public String getEmbedding() {
+    return embedding;
+  }
+
+  public void setEmbedding(String embedding) {
+    this.embedding = embedding;
+  }
+
 }

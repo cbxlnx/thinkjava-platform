@@ -105,19 +105,19 @@ public class LearnService {
         if (allLessons.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No lessons available");
         }
-
+        // get completed lessons for user to determine progression
         Set<UUID> completedLessonIds = progressRepository.findByUser(user).stream()
-                .filter(p -> p.getStatus() == LessonStatus.completed)// if there is an incomplete lesson , return it.
+                .filter(p -> p.getStatus() == LessonStatus.completed)   
                 .map(p -> p.getLesson().getId())
                 .collect(Collectors.toSet());
 
         List<Checkpoint> order = List.of(
                 Checkpoint.fundamentals, Checkpoint.loops, Checkpoint.arrays, Checkpoint.methods, Checkpoint.oop);
-
+        // start from the checkpoint determined by diagnostic, but if mastery is low, may recommend earlier checkpoint for review
         int startIdx = order.indexOf(start);
         if (startIdx < 0)
             startIdx = 0;
-
+        // first try to find an incomplete lesson in the current checkpoint or later, prioritizing the current checkpoint
         for (int i = startIdx; i < order.size(); i++) {
             Checkpoint cp = order.get(i);
             double mastery = masteryMap.getOrDefault(cp, 0.0);
@@ -129,7 +129,7 @@ public class LearnService {
 
             if (cpLessons.isEmpty())
                 continue;
-
+            // find first incomplete lesson in this checkpoint
             Optional<Lesson> firstIncomplete = cpLessons.stream()
                     .filter(l -> !completedLessonIds.contains(l.getId()))
                     .findFirst();
@@ -339,6 +339,7 @@ public class LearnService {
         if (checkpointLessons.isEmpty()) {
             mastery = baseline;
         } else {
+            // calculate completion ratio and average quiz score for checkpoint lessons
             Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user)
                     .stream()
                     .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
@@ -365,7 +366,11 @@ public class LearnService {
 
             double progressScore = (0.5 * completionRatio) + (0.5 * avgQuizScore);
 
-            mastery = baseline + ((1.0 - baseline) * progressScore);
+            if (completionRatio >= 1.0) {
+                mastery = 1.0;
+            } else {
+                mastery = baseline + ((1.0 - baseline) * progressScore);
+            }
         }
 
         mastery = clamp(mastery, 0.0, 1.0);
@@ -376,11 +381,11 @@ public class LearnService {
 
         return mastery;
     }
-
+    // helper to build embedding text for a lesson block, including markdown, video title/description, and quiz question/options if applicable
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }
-
+    // helper to map numeric difficulty to level tag
     private String mapLevelTag(int difficulty) {
         return difficulty == 1 ? "Beginner"
                 : difficulty == 2 ? "Intermediate"
@@ -502,7 +507,7 @@ public class LearnService {
         Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user)
                 .stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
-
+        // get progress for all lessons to determine completion and locking
         Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
                 .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
         int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
@@ -514,7 +519,7 @@ public class LearnService {
         List<Lesson> allLessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
 
         List<LessonSummaryResponse> recommended = new ArrayList<>();
-
+        // iterate over weakest areas and find the first accessible, not completed lesson for recommendation
         for (Checkpoint cp : orderedWeakAreas) {
             List<Lesson> cpLessons = allLessons.stream()
                     .filter(l -> l.getCheckpoint() == cp)
