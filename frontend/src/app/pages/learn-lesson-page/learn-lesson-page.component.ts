@@ -7,7 +7,8 @@ import { LearnApiService } from '../../core/learn/learn-api.service';
 import { LessonResponse } from '../../core/learn/learn.models';
 import { MarkdownModule } from 'ngx-markdown';
 import { HostListener } from '@angular/core';
-import { LessonSummary } from '../../core/learn/learn.service';
+import { LessonSummary, TutorSearchResult } from '../../core/learn/learn.service';
+import { AiTutorComponent } from '../../core/learn/ai-tutor/ai-tutor.component';
 
 type UiBlock = LessonResponse['blocks'][number] & {
   payloadObj?: any;
@@ -17,7 +18,7 @@ type UiBlock = LessonResponse['blocks'][number] & {
 @Component({
   selector: 'app-learn-lesson-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, MarkdownModule],
+  imports: [CommonModule, FormsModule, RouterLink, MarkdownModule, AiTutorComponent],
   templateUrl: './learn-lesson-page.component.html',
   styleUrls: ['./learn-lesson-page.component.css'],
 })
@@ -40,6 +41,13 @@ export class LearnLessonPageComponent implements OnInit {
   postQuizRecommendations: LessonSummary[] = [];
   loadingPostQuizRecommendations = false;
 
+  //tutor 
+  tutorQuestion = '';
+  tutorLoading = false;
+  tutorError = '';
+  tutorMatches: TutorSearchResult[] = [];
+  tutorAnswer = '';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -48,14 +56,14 @@ export class LearnLessonPageComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-     this.route.paramMap.subscribe(params => {
-    this.lessonId = this.route.snapshot.paramMap.get('id') || '';
-    if (!this.lessonId) {
-      this.error = 'Missing lesson id';
-      this.loading = false;
-      return;
-    }
-    this.loadLesson();
+    this.route.paramMap.subscribe(params => {
+      this.lessonId = this.route.snapshot.paramMap.get('id') || '';
+      if (!this.lessonId) {
+        this.error = 'Missing lesson id';
+        this.loading = false;
+        return;
+      }
+      this.loadLesson();
     });
   }
 
@@ -105,56 +113,56 @@ export class LearnLessonPageComponent implements OnInit {
     return qs.every((q) => !!this.answers[q.id]);
   }
 
- submitQuiz() {
-  if (!this.data) return;
-  if (!this.canSubmit()) return;
+  submitQuiz() {
+    if (!this.data) return;
+    if (!this.canSubmit()) return;
 
-  this.submitting = true;
-  this.submitResult = null;
-  this.postQuizRecommendations = [];
-  this.loadingPostQuizRecommendations = false;
+    this.submitting = true;
+    this.submitResult = null;
+    this.postQuizRecommendations = [];
+    this.loadingPostQuizRecommendations = false;
 
-  this.learnApi.submitQuiz(this.lessonId, { answers: this.answers }).subscribe({
-    next: (res) => {
-      this.submitResult = {
-        score: res.score,
-        passed: res.passed,
-        nextId: res.recommendedNextLessonId,
-        updated: res.updatedCheckpointMastery,
-      };
+    this.learnApi.submitQuiz(this.lessonId, { answers: this.answers }).subscribe({
+      next: (res) => {
+        this.submitResult = {
+          score: res.score,
+          passed: res.passed,
+          nextId: res.recommendedNextLessonId,
+          updated: res.updatedCheckpointMastery,
+        };
 
-      this.submitting = false;
+        this.submitting = false;
 
-      if (res.passed) {
-        this.loadPostQuizRecommendations();
+        if (res.passed) {
+          this.loadPostQuizRecommendations();
+        }
+      },
+      error: () => {
+        this.submitting = false;
+        this.error = 'Quiz submit failed';
+      },
+    });
+  }
+
+  loadPostQuizRecommendations(): void {
+    this.loadingPostQuizRecommendations = true;
+
+    this.learnApi.getRecommendations().subscribe({
+      next: (res) => {
+        console.log('Post-quiz recommendations response', res);
+
+        this.postQuizRecommendations = (res.recommendedLessons || [])
+          .filter(l => l.id !== this.lessonId)
+          .slice(0, 3);
+
+        this.loadingPostQuizRecommendations = false;
+      },
+      error: (err) => {
+        console.error('Failed to load post-quiz recommendations', err);
+        this.loadingPostQuizRecommendations = false;
       }
-    },
-    error: () => {
-      this.submitting = false;
-      this.error = 'Quiz submit failed';
-    },
-  });
-}
-
-loadPostQuizRecommendations(): void {
-  this.loadingPostQuizRecommendations = true;
-
-  this.learnApi.getRecommendations().subscribe({
-    next: (res) => {
-      console.log('Post-quiz recommendations response', res);
-
-      this.postQuizRecommendations = (res.recommendedLessons || [])
-        .filter(l => l.id !== this.lessonId)
-        .slice(0, 3);
-
-      this.loadingPostQuizRecommendations = false;
-    },
-    error: (err) => {
-      console.error('Failed to load post-quiz recommendations', err);
-      this.loadingPostQuizRecommendations = false;
-    }
-  });
-}
+    });
+  }
 
   videoSrc(url?: string | null): SafeResourceUrl | null {
     if (!url) return null;
@@ -262,7 +270,7 @@ loadPostQuizRecommendations(): void {
       'byte', 'short', 'int', 'long', 'float', 'double', 'char', 'boolean',
       'String', 'var', 'final', 'new', 'return', 'void',
       'public', 'private', 'protected', 'static'
-       // 'class'
+      // 'class'
     ];
     const kwRe = new RegExp(`\\b(${kw.join('|')})\\b${notInTag}`, 'g');
     s = s.replace(kwRe, `<span class="kw">$1</span>`);
@@ -271,6 +279,45 @@ loadPostQuizRecommendations(): void {
     return this.sanitizer.bypassSecurityTrustHtml(s);
   }
 
+  get heroSub(): string {
+    const level = this.data?.lesson?.levelTag?.toLowerCase();
+
+    switch (level) {
+      case 'beginner':
+        return 'Start building your Java foundations with clear explanations and simple examples.';
+      case 'intermediate':
+        return 'Strengthen your problem-solving skills and deepen your understanding of core Java concepts.';
+      case 'advanced':
+        return 'Explore deeper design ideas, abstraction, and more advanced Java problem-solving.';
+      default:
+        return 'Continue your structured Java learning journey.';
+    }
+  }
+
+  askTutor() {
+    const question = this.tutorQuestion.trim();
+    if (!question || !this.lessonId) return;
+
+    this.tutorLoading = true;
+    this.tutorError = '';
+    this.tutorMatches = [];
+
+    this.learnApi.askTutor({
+      lessonId: this.lessonId,
+      question
+    }).subscribe({
+      next: (res) => {
+        this.tutorMatches = res.matches ?? [];
+        this.tutorAnswer = res.answer ?? '';
+        this.tutorLoading = false;
+        
+      },
+      error: () => {
+        this.tutorError = 'Tutor search failed';
+        this.tutorLoading = false;
+      }
+    });
+  }
 
 
 }

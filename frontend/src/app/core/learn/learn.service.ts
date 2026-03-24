@@ -20,6 +20,8 @@ export type LessonResponse = {
     title: string;
     orderIndex: number;
     estimatedMinutes?: number;
+    difficulty: number;
+    levelTag: string;
   };
   sections: Array<{
     order: number;
@@ -70,6 +72,25 @@ export type AllLessonsResponse = {
   userLevel: UserLevel;
   lessons: LessonSummary[];
 };
+
+export interface TutorAskRequest {
+  lessonId: string;
+  question: string;
+}
+
+export interface TutorSearchResult {
+  blockId: string;
+  lessonId: string;
+  sectionOrder: number;
+  type: string;
+  similarity: number;
+}
+
+export interface TutorAskResponse {
+  question: string;
+  matches: TutorSearchResult[];
+  answer: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class LearnService {

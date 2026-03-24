@@ -42,4 +42,7 @@ public class DiagnosticResult {
 
   @Column(name = "completed_at", nullable = false)
   private Instant completedAt = Instant.now();
+
+  @Column(name = "diagnostic_percent")
+  private Integer diagnosticPercent;
 }

@@ -1,11 +1,11 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/thinkjava
-    username: thinkjava
-    password: thinkjava
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -16,8 +16,16 @@ spring:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:dev-super-secret-change-me}
-    expirationMillis: 604800000
+    secret: ${JWT_SECRET}
+    expirationMillis: ${JWT_EXPIRATION_MILLIS:604800000}
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+  embedding:
+    model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+  chat:
+    model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
 
 logging:
   level:

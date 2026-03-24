@@ -1198,3 +1198,164 @@
     min-width: 600px;
   }
 }
+
+/* --- Overall mastery card --- */
+.mastery {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  padding-top: 0.15rem;
+}
+
+.ring {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.ring-num {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #643df6;
+}
+
+.ring-sub {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #6f678f;
+}
+
+.mastery-stats {
+  width: 100%;
+  max-width: 760px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.15rem;
+}
+
+.mastery-stat {
+  background: #f7f4ff;
+  border: 1px solid #e8defd;
+  border-radius: 16px;
+  padding: 0.8rem 0.9rem;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(115, 87, 255, 0.05);
+}
+
+.mastery-stat-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #7a7298;
+  margin-bottom: 0.25rem;
+}
+
+.mastery-stat-value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #1f2140;
+  word-break: break-word;
+}
+
+.mastery-note {
+  width: 100%;
+  max-width: 760px;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #5f5b7a;
+  margin-top: 0.1rem;
+}
+
+.mastery-foot {
+  width: 100%;
+  margin-top: 0.2rem;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.45rem;
+}
+
+.meta-k,
+.meta-v {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6c648c;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: #ece8f3;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6d44f9 0%, #5a32f4 100%);
+}
+
+@media (max-width: 900px) {
+  .mastery-stats {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+
+  .ring {
+    width: 140px;
+    height: 140px;
+  }
+
+  .ring-num {
+    font-size: 1.7rem;
+  }
+
+  .ring-sub {
+    font-size: 0.78rem;
+  }
+
+  .mastery-note {
+    font-size: 0.88rem;
+  }
+
+  .meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.mastery-stat-value--level {
+  font-size: 0.95rem;
+}

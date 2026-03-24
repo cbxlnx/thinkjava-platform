@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.thinkjava.platform.learn.section.LessonSemanticSearchService;
 
 import java.time.Instant;
 import java.util.*;
@@ -48,7 +49,8 @@ class LearnServiceTest {
         private MasteryRepository masteryRepository;
         @Mock
         private DiagnosticResultRepository diagnosticRepository;
-
+        @Mock
+        private LessonSemanticSearchService semanticSearchService;
         private LearnService learnService;
         private User user;
 
@@ -60,7 +62,8 @@ class LearnServiceTest {
                                 quizRepository,
                                 progressRepository,
                                 masteryRepository,
-                                diagnosticRepository);
+                                diagnosticRepository,
+                                semanticSearchService);
 
                 user = new User();
                 user.setId(1L);
@@ -107,7 +110,9 @@ class LearnServiceTest {
 
                 verify(masteryRepository, times(5)).save(any(Mastery.class));
         }
-        // If average mastery is at least 0.75, user should be classified as advanced and advanced lessons should be unlocked
+
+        // If average mastery is at least 0.75, user should be classified as advanced
+        // and advanced lessons should be unlocked
         @Test
         void getAllLessons_unlocksAdvanced_whenAverageMasteryIsAtLeast075() {
                 Lesson advanced = lesson("Inheritance", Checkpoint.oop, 8, 3);
@@ -129,7 +134,9 @@ class LearnServiceTest {
                 assertEquals("Advanced", response.userLevel());
                 assertFalse(response.lessons().get(0).locked(), "Advanced lesson should be unlocked");
         }
-        //      If average mastery is below 0.45, user should be classified as beginner and advanced lessons should be locked
+
+        // If average mastery is below 0.45, user should be classified as beginner and
+        // advanced lessons should be locked
         @Test
         void submitQuiz_passedQuiz_marksLessonCompleted_andUpdatesCheckpointMastery() {
                 Lesson arraysLesson = lesson("Arrays", Checkpoint.arrays, 5, 2);
@@ -146,8 +153,21 @@ class LearnServiceTest {
                 when(quizRepository.findByLessonIdOrderByDifficultyAsc(arraysLesson.getId()))
                                 .thenReturn(List.of(q1, q2, q3, q4, q5));
 
+                AtomicReference<LessonProgress> progressState = new AtomicReference<>();
+
                 when(progressRepository.findByUserAndLessonId(user, arraysLesson.getId()))
-                                .thenReturn(Optional.empty());
+                                .thenAnswer(inv -> Optional.ofNullable(progressState.get()));
+
+                when(progressRepository.save(any(LessonProgress.class)))
+                                .thenAnswer(inv -> {
+                                        LessonProgress p = inv.getArgument(0);
+                                        progressState.set(p);
+                                        return p;
+                                });
+
+                when(progressRepository.findByUser(user))
+                                .thenAnswer(inv -> progressState.get() == null ? List.of()
+                                                : List.of(progressState.get()));
 
                 when(masteryRepository.findByUserAndCheckpoint(user, Checkpoint.arrays))
                                 .thenReturn(Optional.of(mastery(Checkpoint.arrays, 0.60)));
@@ -156,8 +176,7 @@ class LearnServiceTest {
                                 .thenReturn(List.of(
                                                 mastery(Checkpoint.fundamentals, 0.60),
                                                 mastery(Checkpoint.loops, 0.60),
-                                                mastery(Checkpoint.arrays, 0.68), // after perfect pass, this is what we
-                                                                                  // expect
+                                                mastery(Checkpoint.arrays, 1.00),
                                                 mastery(Checkpoint.methods, 0.60),
                                                 mastery(Checkpoint.oop, 0.60)));
 
@@ -179,7 +198,7 @@ class LearnServiceTest {
 
                 assertTrue(response.passed());
                 assertEquals(1.0, response.score(), 0.0001);
-                assertEquals(0.68, response.updatedCheckpointMastery(), 0.0001);
+                assertEquals(1.0, response.updatedCheckpointMastery(), 0.0001);
 
                 ArgumentCaptor<LessonProgress> progressCaptor = ArgumentCaptor.forClass(LessonProgress.class);
                 verify(progressRepository, atLeastOnce()).save(progressCaptor.capture());
@@ -194,10 +213,13 @@ class LearnServiceTest {
 
                 Mastery savedMastery = masteryCaptor.getAllValues().get(masteryCaptor.getAllValues().size() - 1);
                 assertEquals(Checkpoint.arrays, savedMastery.getCheckpoint());
-                assertEquals(0.68, savedMastery.getMasteryValue(), 0.0001);
+                assertEquals(1.0, savedMastery.getMasteryValue(), 0.0001);
         }
-        // If a user fails a quiz, the lesson should be marked as in_progress (not completed) 
-        // and their checkpoint mastery should decrease but not go below the diagnostic baseline for that checkpoint
+
+        // If a user fails a quiz, the lesson should be marked as in_progress (not
+        // completed)
+        // and their checkpoint mastery should decrease but not go below the diagnostic
+        // baseline for that checkpoint
         @Test
         void submitQuiz_failedQuiz_keepsLessonInProgress_andCanDecreaseCheckpointMastery() {
                 Lesson loopsLesson = lesson("Loops", Checkpoint.loops, 3, 1);
@@ -218,8 +240,21 @@ class LearnServiceTest {
                 existing.setStatus(LessonStatus.in_progress);
                 existing.setBestQuizScore(0.20);
 
+                AtomicReference<LessonProgress> progressState = new AtomicReference<>(existing);
+
                 when(progressRepository.findByUserAndLessonId(user, loopsLesson.getId()))
-                                .thenReturn(Optional.of(existing));
+                                .thenAnswer(inv -> Optional.ofNullable(progressState.get()));
+
+                when(progressRepository.save(any(LessonProgress.class)))
+                                .thenAnswer(inv -> {
+                                        LessonProgress p = inv.getArgument(0);
+                                        progressState.set(p);
+                                        return p;
+                                });
+
+                when(progressRepository.findByUser(user))
+                                .thenAnswer(inv -> progressState.get() == null ? List.of()
+                                                : List.of(progressState.get()));
 
                 when(masteryRepository.findByUserAndCheckpoint(user, Checkpoint.loops))
                                 .thenReturn(Optional.of(mastery(Checkpoint.loops, 0.60)));
@@ -227,7 +262,7 @@ class LearnServiceTest {
                 when(masteryRepository.findByUser(user))
                                 .thenReturn(List.of(
                                                 mastery(Checkpoint.fundamentals, 0.60),
-                                                mastery(Checkpoint.loops, 0.56), // expected after score=0.40
+                                                mastery(Checkpoint.loops, 0.70),
                                                 mastery(Checkpoint.arrays, 0.60),
                                                 mastery(Checkpoint.methods, 0.60),
                                                 mastery(Checkpoint.oop, 0.60)));
@@ -241,15 +276,13 @@ class LearnServiceTest {
 
                 LessonQuizSubmitRequest request = new LessonQuizSubmitRequest(Map.of(
                                 q1.getId(), "A",
-                                q2.getId(), "B"
-                // 2/5 correct => 0.4, fail
-                ));
+                                q2.getId(), "B"));
 
                 LessonQuizSubmitResponse response = learnService.submitQuiz(user, loopsLesson.getId(), request);
 
                 assertFalse(response.passed());
                 assertEquals(0.4, response.score(), 0.0001);
-                assertEquals(0.56, response.updatedCheckpointMastery(), 0.0001);
+                assertEquals(0.60, response.updatedCheckpointMastery(), 0.0001);
 
                 ArgumentCaptor<LessonProgress> progressCaptor = ArgumentCaptor.forClass(LessonProgress.class);
                 verify(progressRepository, atLeastOnce()).save(progressCaptor.capture());
@@ -340,6 +373,9 @@ class LearnServiceTest {
                                         progressState.set(p);
                                         return p;
                                 });
+                when(progressRepository.findByUser(user))
+                                .thenAnswer(inv -> progressState.get() == null ? List.of()
+                                                : List.of(progressState.get()));
 
                 when(masteryRepository.findByUserAndCheckpoint(user, Checkpoint.arrays))
                                 .thenAnswer(inv -> Optional.of(masteryState.get()));
@@ -362,8 +398,8 @@ class LearnServiceTest {
                 LessonQuizSubmitResponse first = learnService.submitQuiz(user, arraysLesson.getId(), perfectRequest);
                 LessonQuizSubmitResponse second = learnService.submitQuiz(user, arraysLesson.getId(), perfectRequest);
 
-                assertEquals(0.68, first.updatedCheckpointMastery(), 0.0001);
-                assertEquals(0.68, second.updatedCheckpointMastery(), 0.0001,
+                assertEquals(1.0, first.updatedCheckpointMastery(), 0.0001);
+                assertEquals(1.0, second.updatedCheckpointMastery(), 0.0001,
                                 "Mastery should not increase again for the same lesson when score did not improve");
         }
 
@@ -563,5 +599,106 @@ class LearnServiceTest {
 
                 assertFalse(response.recommendedLessons().isEmpty(),
                                 "Expected recommendations because user still has unlocked incomplete lessons");
+        }
+
+        // If the final lesson in a checkpoint is completed, the checkpoint mastery
+        // should reach 100% even if it was below 100% before
+        @Test
+        void submitQuiz_whenFinalLessonInCheckpointIsCompleted_shouldSetCheckpointMasteryToOneHundredPercent() {
+                Lesson arrays1 = lesson("Arrays Basics", Checkpoint.arrays, 5, 1);
+                Lesson arrays2 = lesson("Advanced Arrays", Checkpoint.arrays, 6, 2);
+
+                LessonQuizQuestion q1 = question(arrays2, "Q1", "\"A\"", 1);
+                LessonQuizQuestion q2 = question(arrays2, "Q2", "\"B\"", 1);
+                LessonQuizQuestion q3 = question(arrays2, "Q3", "\"C\"", 2);
+                LessonQuizQuestion q4 = question(arrays2, "Q4", "\"D\"", 2);
+                LessonQuizQuestion q5 = question(arrays2, "Q5", "\"E\"", 3);
+
+                LessonProgress alreadyCompleted = new LessonProgress();
+                alreadyCompleted.setUser(user);
+                alreadyCompleted.setLesson(arrays1);
+                alreadyCompleted.setStatus(LessonStatus.completed);
+
+                AtomicReference<LessonProgress> newProgressState = new AtomicReference<>();
+
+                when(lessonRepository.findById(arrays2.getId())).thenReturn(Optional.of(arrays2));
+                when(quizRepository.findByLessonIdOrderByDifficultyAsc(arrays2.getId()))
+                                .thenReturn(List.of(q1, q2, q3, q4, q5));
+
+                when(progressRepository.findByUserAndLessonId(user, arrays2.getId()))
+                                .thenAnswer(inv -> Optional.ofNullable(newProgressState.get()));
+
+                when(progressRepository.save(any(LessonProgress.class)))
+                                .thenAnswer(inv -> {
+                                        LessonProgress p = inv.getArgument(0);
+                                        newProgressState.set(p);
+                                        return p;
+                                });
+
+                when(progressRepository.findByUser(user))
+                                .thenAnswer(inv -> {
+                                        if (newProgressState.get() == null) {
+                                                return List.of(alreadyCompleted);
+                                        }
+                                        return List.of(alreadyCompleted, newProgressState.get());
+                                });
+
+                when(masteryRepository.findByUserAndCheckpoint(user, Checkpoint.arrays))
+                                .thenReturn(Optional.of(mastery(Checkpoint.arrays, 0.60)));
+
+                when(diagnosticRepository.findByUserId(user.getId()))
+                                .thenReturn(Optional.of(diagnostic("Medium", "Medium", "Medium", "Medium", "Medium",
+                                                "fundamentals")));
+
+                when(lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc())
+                                .thenReturn(List.of(arrays1, arrays2));
+
+                when(masteryRepository.findByUser(user))
+                                .thenReturn(List.of(
+                                                mastery(Checkpoint.fundamentals, 0.60),
+                                                mastery(Checkpoint.loops, 0.60),
+                                                mastery(Checkpoint.arrays, 1.00),
+                                                mastery(Checkpoint.methods, 0.60),
+                                                mastery(Checkpoint.oop, 0.60)));
+
+                LessonQuizSubmitRequest request = new LessonQuizSubmitRequest(Map.of(
+                                q1.getId(), "A",
+                                q2.getId(), "B",
+                                q3.getId(), "C",
+                                q4.getId(), "D",
+                                q5.getId(), "E"));
+
+                LessonQuizSubmitResponse response = learnService.submitQuiz(user, arrays2.getId(), request);
+
+                assertTrue(response.passed());
+                assertEquals(1.0, response.score(), 0.0001);
+                assertEquals(1.0, response.updatedCheckpointMastery(), 0.0001,
+                                "Checkpoint mastery should reach 100% when all lessons in the checkpoint are completed");
+        }
+
+        @Test
+        void getAllLessons_whenAllCheckpointMasteryIsOneHundredPercent_shouldShowAdvancedAndUnlockEverything() {
+                Lesson fundamentals = lesson("Variables", Checkpoint.fundamentals, 1, 1);
+                Lesson loops = lesson("Loops", Checkpoint.loops, 2, 1);
+                Lesson arrays = lesson("Arrays", Checkpoint.arrays, 3, 2);
+                Lesson methods = lesson("Methods", Checkpoint.methods, 4, 2);
+                Lesson oopAdvanced = lesson("OOP Mastery", Checkpoint.oop, 5, 3);
+
+                when(masteryRepository.findByUser(user)).thenReturn(List.of(
+                                mastery(Checkpoint.fundamentals, 1.00),
+                                mastery(Checkpoint.loops, 1.00),
+                                mastery(Checkpoint.arrays, 1.00),
+                                mastery(Checkpoint.methods, 1.00),
+                                mastery(Checkpoint.oop, 1.00)));
+
+                when(progressRepository.findByUser(user)).thenReturn(List.of());
+                when(lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc())
+                                .thenReturn(List.of(fundamentals, loops, arrays, methods, oopAdvanced));
+
+                AllLessonsResponse response = learnService.getAllLessons(user);
+
+                assertEquals("Advanced", response.userLevel());
+                assertTrue(response.lessons().stream().noneMatch(l -> l.locked()),
+                                "No lessons should remain locked when mastery is 100% across all checkpoints");
         }
 }

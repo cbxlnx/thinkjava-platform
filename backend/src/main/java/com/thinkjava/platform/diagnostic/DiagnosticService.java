@@ -43,7 +43,8 @@ public class DiagnosticService {
             r.getMethods(),
             r.getOop(),
             r.getStartModule(),
-            r.getCompletedAt()
+            r.getCompletedAt(),
+            r.getDiagnosticPercent()
         ))
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Diagnostic not completed"));
   }
@@ -61,6 +62,7 @@ public class DiagnosticService {
     r.setOop(req.getOop());
     r.setStartModule(req.getStartModule());
     r.setCompletedAt(Instant.now());
+    r.setDiagnosticPercent(req.getDiagnosticPercent());
 
     DiagnosticResult saved = results.save(r);
 
@@ -76,7 +78,8 @@ public class DiagnosticService {
         saved.getMethods(),
         saved.getOop(),
         saved.getStartModule(),
-        saved.getCompletedAt()
+        saved.getCompletedAt(),
+        saved.getDiagnosticPercent()
     );
   }
 }

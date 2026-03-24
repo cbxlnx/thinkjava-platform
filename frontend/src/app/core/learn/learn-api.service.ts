@@ -8,11 +8,11 @@ import {
   LessonQuizSubmitRequest,
   LessonQuizSubmitResponse,
 } from './learn.models';
-import { LearnRecommendationsResponse } from './learn.service';
+import { LearnRecommendationsResponse, TutorAskRequest, TutorAskResponse } from './learn.service';
 
 @Injectable({ providedIn: 'root' })
 export class LearnApiService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getPath(): Observable<LearnPathResponse> {
     return this.http.get<LearnPathResponse>(`${API_BASE_URL}/learn/path`);
@@ -23,15 +23,19 @@ export class LearnApiService {
   }
 
   getRecommendations(): Observable<LearnRecommendationsResponse> {
-  return this.http.get<LearnRecommendationsResponse>(
-    `${API_BASE_URL}/learn/recommendations`
-  );
-}
+    return this.http.get<LearnRecommendationsResponse>(
+      `${API_BASE_URL}/learn/recommendations`
+    );
+  }
 
   submitQuiz(lessonId: string, body: LessonQuizSubmitRequest): Observable<LessonQuizSubmitResponse> {
     return this.http.post<LessonQuizSubmitResponse>(
       `${API_BASE_URL}/learn/lesson/${lessonId}/quiz/submit`,
       body
     );
+  }
+
+  askTutor(body: TutorAskRequest) {
+    return this.http.post<TutorAskResponse>(`${API_BASE_URL}/tutor/ask`, body);
   }
 }
