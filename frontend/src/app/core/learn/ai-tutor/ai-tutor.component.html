@@ -4,46 +4,48 @@
     <h3>AI Tutor</h3>
   </div>
 
-<div class="chip-row">
-  <button
-    type="button"
-    class="chip"
-    (click)="askPreset('Explain the lesson topic ' + topicLabel + ' simply for a beginner')">
-    Simplify this
-  </button>
+  <div class="chip-row">
+    <button
+      type="button"
+      class="chip"
+      (click)="askPreset('Explain the lesson topic ' + topicLabel + ' simply for a beginner')">
+      Simplify this
+    </button>
 
-  <button
-    type="button"
-    class="chip"
-    (click)="askPreset('Show another simple beginner-friendly example for ' + topicLabel + '. You may create a new example if needed, but keep it within this lesson topic.')">
-    Show another example
-  </button>
+    <button
+      type="button"
+      class="chip"
+      (click)="askPreset('Show another simple beginner-friendly example for ' + topicLabel + '. You may create a new example if needed, but keep it within this lesson topic.')">
+      Show another example
+    </button>
 
-  <button
-    type="button"
-    class="chip"
-    (click)="askPreset('Help me understand my mistake in the lesson topic ' + topicLabel + '. If I have not provided an error yet, ask me to paste my code or error message.')">
-    Explain my error
-  </button>
-</div>
-
-  <div class="tutor-message intro">
-    <div class="message-icon">🤖</div>
-    <div class="message-bubble intro-bubble">
-      Hi! I'm your AI Tutor. I'm here to help you solve this challenge.
-      Feel free to ask me anything about <b>{{ topicLabel }}</b>.
-    </div>
+    <button
+      type="button"
+      class="chip"
+      (click)="askPreset('Help me understand my mistake in the lesson topic ' + topicLabel + '. If I have not provided an error yet, ask me to paste my code or error message.')">
+      Explain my error
+    </button>
   </div>
 
-  <div class="tutor-message answer-block" *ngIf="tutorAnswer">
-    <div class="message-icon">🤖</div>
-    <div class="message-bubble answer-bubble">
-      <div [innerHTML]="tutorAnswer"></div>
+  <div class="tutor-messages">
+    <div class="tutor-message intro">
+      <div class="message-icon">🤖</div>
+      <div class="message-bubble intro-bubble">
+        Hi! I'm your AI Tutor. I'm here to help you solve this challenge.
+        Feel free to ask me anything about <b>{{ topicLabel }}</b>.
+      </div>
     </div>
-  </div>
 
-  <div class="hint small" *ngIf="tutorLoading">Thinking...</div>
-  <div class="error small" *ngIf="tutorError">{{ tutorError }}</div>
+    <div class="tutor-message answer-block" *ngIf="tutorAnswer">
+      <div class="message-icon">🤖</div>
+      <div class="message-bubble answer-bubble">
+        <div [innerHTML]="tutorAnswer"></div>
+      </div>
+    </div>
+
+    <div class="hint small" *ngIf="tutorLoading">Thinking...</div>
+    <div class="error small" *ngIf="tutorError">{{ tutorError }}</div>
+  </div>
 
   <div class="tutor-input-row">
     <input
@@ -61,11 +63,3 @@
     </button>
   </div>
 </div>
-
-<!-- <div class="tutor-results" *ngIf="tutorMatches.length">
-    <div class="tutor-result-card" *ngFor="let m of tutorMatches">
-      <div><b>Section:</b> {{ m.sectionOrder }}</div>
-      <div><b>Type:</b> {{ m.type }}</div>
-      <div><b>Similarity:</b> {{ m.similarity | number:'1.2-3' }}</div>
-    </div>
-  </div> -->

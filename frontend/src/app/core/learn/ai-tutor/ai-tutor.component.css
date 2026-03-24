@@ -7,12 +7,46 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  height: 720px;
+  min-height: 720px;
+  max-height: 720px;
+
+  width: 100%;
+  max-width: 560px;
+  min-width: 500px; 
+  overflow: hidden;
+}
+
+.tutor-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.message-bubble {
+  border-radius: 16px;
+  padding: 16px 18px;
+  line-height: 1.6;
+  font-size: 1rem;
+  flex: 1;         
+  max-width: none;   
+  min-width: 0;   
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.intro-bubble,
+.answer-bubble {
+  width: 100%;
 }
 
 .tutor-header {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .tutor-header h3 {
@@ -40,6 +74,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .chip {
@@ -56,6 +91,17 @@
   background: #f7f8fc;
 }
 
+.tutor-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .tutor-message {
   display: flex;
   align-items: flex-start;
@@ -67,6 +113,9 @@
   padding: 16px 18px;
   line-height: 1.5;
   font-size: 1rem;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .intro-bubble {
@@ -85,6 +134,7 @@
   align-items: center;
   gap: 10px;
   margin-top: auto;
+  flex-shrink: 0;
 }
 
 .tutor-input {
@@ -127,4 +177,135 @@
 
 .error.small {
   color: #b42318;
+}
+
+.answer-bubble pre,
+.answer-bubble code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.answer-bubble pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.answer-bubble {
+  background: #f8f9fc;
+  border: 1px solid #e7ebf5;
+  color: #101828;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.answer-bubble p,
+.answer-bubble li,
+.answer-bubble h1,
+.answer-bubble h2,
+.answer-bubble h3,
+.answer-bubble h4,
+.answer-bubble h5,
+.answer-bubble h6 {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* inline code */
+.answer-bubble code {
+  background: #eef2ff;
+  color: #5b21b6;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.95em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* code blocks */
+.answer-bubble pre {
+  background: #111827;
+  color: #f9fafb;
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin: 12px 0;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  white-space: pre-wrap;    
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  overflow-x: auto;
+  border: 1px solid #1f2937;
+}
+
+/* code inside pre should not get inline-code styling */
+.answer-bubble pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  white-space: inherit;
+}
+
+.answer-bubble {
+  background: #f8f9fc;
+  border: 1px solid #e7ebf5;
+  color: #101828;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.answer-bubble p,
+.answer-bubble li,
+.answer-bubble h1,
+.answer-bubble h2,
+.answer-bubble h3,
+.answer-bubble h4,
+.answer-bubble h5,
+.answer-bubble h6 {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.answer-bubble code {
+  background: #eef2ff;
+  color: #5b21b6;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.95em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.answer-bubble pre {
+  background: #111827;
+  color: #f9fafb;
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin: 12px 0;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  overflow-x: auto;
+  border: 1px solid #1f2937;
+}
+
+.answer-bubble pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  white-space: inherit;
 }
