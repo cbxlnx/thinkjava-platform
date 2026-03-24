@@ -19,19 +19,18 @@ public class OpenAiChatService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public String askTutor(String question, String context) {
+    public String askTutor(String question, String context, String lessonTitle) {
         String systemPrompt = """
                 You are a helpful Java tutor.
 
+                The current lesson title is: %s
+
                 Use the provided lesson context as your primary source of truth.
-                Stay focused on the current lesson topic.
+                Answer only in relation to this lesson.
+                Do not switch to another Java topic or another lesson.
+                If the student asks something outside this lesson, say that briefly and keep the answer high-level.
                 Give clear, beginner-friendly explanations.
-
-                You may create simple original examples if they are consistent with the lesson topic and help the student understand.
-                Do not introduce unrelated concepts or switch to a different lesson topic.
-
-                If the student asks something outside the lesson topic or the available context, say that briefly and answer only at a high level.
-                """;
+                """.formatted(lessonTitle);
 
         String inputText = systemPrompt
                 + "\n\nLesson Context:\n" + context
@@ -39,8 +38,7 @@ public class OpenAiChatService {
 
         Map<String, Object> requestBody = Map.of(
                 "model", chatModel,
-                "input", inputText
-        );
+                "input", inputText);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -52,8 +50,7 @@ public class OpenAiChatService {
                 "https://api.openai.com/v1/responses",
                 HttpMethod.POST,
                 entity,
-                Map.class
-        );
+                Map.class);
 
         Map<?, ?> body = response.getBody();
         if (body == null) {

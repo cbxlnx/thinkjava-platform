@@ -18,21 +18,11 @@ public class LessonSemanticSearchService {
         this.blockRepository = blockRepository;
         this.openAiEmbeddingService = openAiEmbeddingService;
     }
-    // find the most relevant sections for a user question, prioritizing sections from the current lesson
+
+    // find the most relevant sections for a user question, prioritizing sections
+    // from the current lesson
     public List<LessonBlockSearchResult> findRelevantSections(UUID currentLessonId, String userQuestion) {
         String queryEmbedding = openAiEmbeddingService.createEmbedding(userQuestion);
-
-        List<LessonBlockSearchResult> inLessonResults =
-                blockRepository.findTopSimilarInLesson(currentLessonId, queryEmbedding, 3);
-
-        if (!inLessonResults.isEmpty()) {
-            Double topSimilarity = inLessonResults.get(0).getSimilarity();
-
-            if (topSimilarity != null && topSimilarity >= 0.55) {
-                return inLessonResults;
-            }
-        }
-
-        return blockRepository.findTopSimilarAcrossAllLessons(queryEmbedding, 3);
+        return blockRepository.findTopSimilarInLesson(currentLessonId, queryEmbedding, 3);
     }
 }
