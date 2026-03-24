@@ -12,12 +12,12 @@ export class AuthService {
   constructor(private http: HttpClient) {}
 
   register(email: string, password: string) {
-    return this.http.post<JwtResponse>(`${API_BASE_URL}/auth/register`, { email, password })
+    return this.http.post<JwtResponse>(`${API_BASE_URL}/api/auth/register`, { email, password })
       .pipe(tap(res => this.setToken(res.token)));
   }
 
   login(email: string, password: string) {
-    return this.http.post<JwtResponse>(`${API_BASE_URL}/auth/login`, { email, password })
+    return this.http.post<JwtResponse>(`${API_BASE_URL}/api/auth/login`, { email, password })
       .pipe(tap(res => this.setToken(res.token)));
   }
 
