@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LearnApiService } from '../learn-api.service';
 import { TutorSearchResult } from '../learn.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { marked } from 'marked';
 
 @Component({
   selector: 'app-ai-tutor',
@@ -22,7 +23,10 @@ export class AiTutorComponent {
   tutorMatches: TutorSearchResult[] = [];
   tutorAnswer: SafeHtml = '';
 
-  constructor(private learnApi: LearnApiService, private sanitizer: DomSanitizer) { }
+  constructor(
+    private learnApi: LearnApiService,
+    private sanitizer: DomSanitizer
+  ) {}
 
   askTutor() {
     const question = this.tutorQuestion.trim();
@@ -37,11 +41,17 @@ export class AiTutorComponent {
       lessonId: this.lessonId,
       question
     }).subscribe({
-      next: (res) => {
+      next: async (res) => {
         this.tutorMatches = res.matches ?? [];
-        this.tutorAnswer = this.sanitizer.bypassSecurityTrustHtml(
-          (res.answer ?? '').replace(/\n/g, '<br>')
-        );
+
+        const rawAnswer = res.answer ?? '';
+
+        const html = await marked.parse(rawAnswer, {
+          breaks: true,
+          gfm: true
+        });
+
+        this.tutorAnswer = this.sanitizer.bypassSecurityTrustHtml(html);
         this.tutorLoading = false;
       },
       error: () => {
