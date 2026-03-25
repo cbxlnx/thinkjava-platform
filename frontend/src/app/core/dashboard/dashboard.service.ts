@@ -27,6 +27,6 @@ export class DashboardService {
   constructor(private http: HttpClient) {}
 
   getSummary(): Observable<DashboardSummaryResponse> {
-    return this.http.get<DashboardSummaryResponse>(`${API_BASE_URL}/dashboard/summary`);
+    return this.http.get<DashboardSummaryResponse>(`${API_BASE_URL}/api/dashboard/summary`);
   }
 }
