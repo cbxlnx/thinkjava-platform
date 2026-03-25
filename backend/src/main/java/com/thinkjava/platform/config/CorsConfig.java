@@ -16,8 +16,8 @@ public class CorsConfig {
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowedOriginPatterns(List.of(
         "http://localhost:4200",
-        "https://thinkjava-app.vercel.app",
-        "https://thinkjava-0i030re5m-cbxlnxs-projects.vercel.app"));
+        "https://*.vercel.app"
+    ));
     config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
     config.setAllowedHeaders(List.of("*"));
     config.setAllowCredentials(true);
