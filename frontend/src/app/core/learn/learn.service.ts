@@ -97,11 +97,11 @@ export class LearnService {
   constructor(private http: HttpClient) { }
 
   getPath(): Observable<LearnPathResponse> {
-    return this.http.get<LearnPathResponse>(`${API_BASE_URL}/learn/path`);
+    return this.http.get<LearnPathResponse>(`${API_BASE_URL}/api/learn/path`);
   }
 
   getAllLessons(): Observable<AllLessonsResponse> {
-    return this.http.get<AllLessonsResponse>(`${API_BASE_URL}/learn/lessons`);
+    return this.http.get<AllLessonsResponse>(`${API_BASE_URL}/api/learn/lessons`);
   }
 
   getLesson(lessonId: string): Observable<LessonResponse> {
@@ -109,16 +109,16 @@ export class LearnService {
   }
 
   submitQuiz(lessonId: string, body: LessonQuizSubmitRequest): Observable<LessonQuizSubmitResponse> {
-    return this.http.post<LessonQuizSubmitResponse>(`${API_BASE_URL}/learn/lesson/${lessonId}/quiz/submit`, body);
+    return this.http.post<LessonQuizSubmitResponse>(`${API_BASE_URL}/api/learn/lesson/${lessonId}/quiz/submit`, body);
   }
 
   getRecommendations(): Observable<LearnRecommendationsResponse> {
     return this.http.get<LearnRecommendationsResponse>(
-      `${API_BASE_URL}/learn/recommendations`
+      `${API_BASE_URL}/api/learn/recommendations`
     );
   }
 
   getCurrentFocus(): Observable<LessonSummary> {
-    return this.http.get<LessonSummary>(`${API_BASE_URL}/learn/current-focus`);
+    return this.http.get<LessonSummary>(`${API_BASE_URL}/api/learn/current-focus`);
   }
 }

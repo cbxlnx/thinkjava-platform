@@ -15,27 +15,27 @@ export class LearnApiService {
   constructor(private http: HttpClient) { }
 
   getPath(): Observable<LearnPathResponse> {
-    return this.http.get<LearnPathResponse>(`${API_BASE_URL}/learn/path`);
+    return this.http.get<LearnPathResponse>(`${API_BASE_URL}/api/learn/path`);
   }
 
   getLesson(lessonId: string): Observable<LessonResponse> {
-    return this.http.get<LessonResponse>(`${API_BASE_URL}/learn/lesson/${lessonId}`);
+    return this.http.get<LessonResponse>(`${API_BASE_URL}/api/learn/lesson/${lessonId}`);
   }
 
   getRecommendations(): Observable<LearnRecommendationsResponse> {
     return this.http.get<LearnRecommendationsResponse>(
-      `${API_BASE_URL}/learn/recommendations`
+      `${API_BASE_URL}/api/learn/recommendations`
     );
   }
 
   submitQuiz(lessonId: string, body: LessonQuizSubmitRequest): Observable<LessonQuizSubmitResponse> {
     return this.http.post<LessonQuizSubmitResponse>(
-      `${API_BASE_URL}/learn/lesson/${lessonId}/quiz/submit`,
+      `${API_BASE_URL}/api/learn/lesson/${lessonId}/quiz/submit`,
       body
     );
   }
 
   askTutor(body: TutorAskRequest) {
-    return this.http.post<TutorAskResponse>(`${API_BASE_URL}/tutor/ask`, body);
+    return this.http.post<TutorAskResponse>(`${API_BASE_URL}/api/tutor/ask`, body);
   }
 }
