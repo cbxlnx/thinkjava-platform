@@ -44,34 +44,13 @@ public class DashboardService {
 
         // Main method to get the dashboard summary for a user
         public DashboardSummaryResponse getSummary(User user) {
+                learnService.ensureMasteryInitialized(user);
+
                 List<LessonProgress> progressList = progressRepository.findByUser(user);
                 var masteryList = masteryRepository.findByUser(user);
 
-                boolean hasLearningEvidence = progressList.stream()
-                                .anyMatch(p -> p.getStatus() == LessonStatus.completed ||
-                                                p.getStatus() == LessonStatus.in_progress ||
-                                                p.getBestQuizScore() != null);
-
-                double avgMastery = masteryList.stream()
-                                .mapToDouble(m -> m.getMasteryValue())
-                                .average()
-                                .orElse(0.0);
-
-                int masteryPercent;
-                String masteryLabel;
-
-                if (!hasLearningEvidence) {
-                        DiagnosticResult diagnosticResult = diagnosticResultRepository.findByUserId(user.getId())
-                                        .orElse(null);
-
-                        masteryPercent = (diagnosticResult != null && diagnosticResult.getDiagnosticPercent() != null)
-                                        ? diagnosticResult.getDiagnosticPercent()
-                                        : (int) Math.round(avgMastery * 100.0);
-                } else {
-                        masteryPercent = (int) Math.round(avgMastery * 100.0);
-                }
-
-                masteryLabel = masteryPercent >= 75 ? "Advanced" : masteryPercent >= 45 ? "Intermediate" : "Beginner";
+                DiagnosticResult diagnosticResult = diagnosticResultRepository.findByUserId(user.getId())
+                                .orElse(null);
 
                 long completedCount = progressList.stream()
                                 .filter(p -> p.getStatus() == LessonStatus.completed)
@@ -91,7 +70,8 @@ public class DashboardService {
                                 .toList();
 
                 int weeklyMinutes = weeklyProgress.stream()
-                                .mapToInt(p -> p.getLesson().getEstimatedMinutes() == null ? 0
+                                .mapToInt(p -> p.getLesson().getEstimatedMinutes() == null
+                                                ? 0
                                                 : p.getLesson().getEstimatedMinutes())
                                 .sum();
 
@@ -123,6 +103,12 @@ public class DashboardService {
                                                 m -> m.getCheckpoint().name(),
                                                 m -> (int) Math.round(m.getMasteryValue() * 100.0)));
 
+                int masteryPercent = diagnosticResult != null && diagnosticResult.getDiagnosticPercent() != null
+                                ? diagnosticResult.getDiagnosticPercent()
+                                : 0;
+
+                String masteryLabel = resolveDiagnosticLevel(diagnosticResult);
+
                 return new DashboardSummaryResponse(
                                 masteryPercent,
                                 masteryLabel,
@@ -133,5 +119,36 @@ public class DashboardService {
                                 currentFocus,
                                 recentActivity,
                                 checkpointMastery);
+        }
+
+        private String resolveDiagnosticLevel(DiagnosticResult diagnosticResult) {
+                if (diagnosticResult == null) {
+                        return "Unknown";
+                }
+
+                long strongCount = List.of(
+                                diagnosticResult.getFundamentals(),
+                                diagnosticResult.getLoops(),
+                                diagnosticResult.getArrays(),
+                                diagnosticResult.getMethods(),
+                                diagnosticResult.getOop()).stream().filter("Strong"::equals).count();
+
+                long weakOrUnknownCount = List.of(
+                                diagnosticResult.getFundamentals(),
+                                diagnosticResult.getLoops(),
+                                diagnosticResult.getArrays(),
+                                diagnosticResult.getMethods(),
+                                diagnosticResult.getOop()).stream().filter(v -> "Weak".equals(v) || "Unknown".equals(v))
+                                .count();
+
+                if (strongCount >= 4) {
+                        return "Advanced";
+                }
+
+                if (weakOrUnknownCount >= 3) {
+                        return "Beginner";
+                }
+
+                return "Intermediate";
         }
 }

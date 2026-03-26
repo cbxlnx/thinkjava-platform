@@ -8,13 +8,12 @@
             <div class="hero-title">Hi, {{ displayName || 'there' }} 👋</div>
             <div class="hero-sub">Ready to continue your Java journey?</div>
             <div class="hero-meta">
-              Your current mastery: <b>{{ masteryLabel }}</b>
+              Your current Java Level: <b>{{ masteryLabel }}</b>
             </div>
 
             <div class="hero-actions">
               <button class="btn primary" (click)="continueLesson()">Continue Learning</button>
-              <button class="btn ghost" (click)="takeQuiz()">Take Quiz</button>
-              <button class="btn soft" (click)="askTutor()">Ask Tutor</button>
+              <button class="btn ghost" (click)="takeQuiz()">Retake Quiz</button>
             </div>
           </div>
 
@@ -61,7 +60,7 @@
         <div class="rec-ai-box">
           <div class="rec-ai-topic">Finding your best next lesson...</div>
           <div class="rec-ai-desc">
-            We’re checking your current mastery and lesson progress to recommend the right topic.
+            We’re checking your diagnostic level and lesson progress to recommend the right topic.
           </div>
         </div>
       </div>
@@ -84,7 +83,7 @@
         <!-- Mastery Overview -->
         <div class="card">
           <div class="card-head">
-            <div class="card-title">Overall Mastery</div>
+            <div class="card-title">Your Java Profile</div>
           </div>
 
           <div class="mastery">
@@ -98,30 +97,30 @@
 
               <div class="ring-center">
                 <div class="ring-num">{{ masteryPercent }}%</div>
-                <div class="ring-sub">Current Mastery</div>
+                <div class="ring-sub">Diagnostic Score</div>
               </div>
             </div>
 
             <div class="mastery-stats">
-              <div class="mastery-stat" *ngIf="hasDiagnosticScore">
-                <div class="mastery-stat-label">Diagnostic Score</div>
-                <div class="mastery-stat-value">{{ diagnosticScorePercent }}%</div>
-              </div>
-
               <div class="mastery-stat">
-                <div class="mastery-stat-label">Current Mastery</div>
+                <div class="mastery-stat-label">Diagnostic Score</div>
                 <div class="mastery-stat-value">{{ masteryPercent }}%</div>
               </div>
 
               <div class="mastery-stat">
-                <div class="mastery-stat-label">Level</div>
+                <div class="mastery-stat-label">Java Level</div>
                 <div class="mastery-stat-value mastery-stat-value--level">{{ masteryLabel }}</div>
+              </div>
+
+              <div class="mastery-stat">
+                <div class="mastery-stat-label">Average Quiz Score</div>
+                <div class="mastery-stat-value">{{ quizScoreAvgText }}</div>
               </div>
             </div>
 
-            <div class="mastery-note" *ngIf="hasDiagnosticScore">
-              Your diagnostic score shows test performance. Current mastery reflects your live progress across Java
-              topics.
+            <div class="mastery-note">
+              Your diagnostic score shows how you performed on the placement quiz. Your lesson progress is tracked
+              separately below.
             </div>
 
             <div class="mastery-foot">
@@ -177,13 +176,13 @@
       <section class="mastery-graph-card">
         <div class="mastery-graph-header">
           <div>
-            <h3>Topic Progress</h3>
-            <p>See how strong your understanding is across core Java topics.</p>
+            <h3>Topic Readiness</h3>
+            <p> You start with a baseline from your diagnostic.
+              Completing lessons helps you reach full readiness in each topic.</p>
           </div>
-
           <div class="mastery-overall">
-            <span class="mastery-overall-value">{{ masteryPercent }}%</span>
-            <span class="mastery-overall-label">{{ masteryLabel }}</span>
+            <span class="mastery-overall-value">{{ masteryLabel }}</span>
+            <span class="mastery-overall-label">Java Level</span>
           </div>
         </div>
 
@@ -234,7 +233,7 @@
         </div>
       </section>
 
-      <footer class="foot">© 2025 ThinkJava — Adaptive Learning Platform.</footer>
+      <footer class="foot">© 2026 ThinkJava — Adaptive Learning Platform.</footer>
     </main>
   </div>
 </div>
