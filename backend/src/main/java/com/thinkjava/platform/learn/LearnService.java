@@ -107,17 +107,19 @@ public class LearnService {
         }
         // get completed lessons for user to determine progression
         Set<UUID> completedLessonIds = progressRepository.findByUser(user).stream()
-                .filter(p -> p.getStatus() == LessonStatus.completed)   
+                .filter(p -> p.getStatus() == LessonStatus.completed)
                 .map(p -> p.getLesson().getId())
                 .collect(Collectors.toSet());
 
         List<Checkpoint> order = List.of(
                 Checkpoint.fundamentals, Checkpoint.loops, Checkpoint.arrays, Checkpoint.methods, Checkpoint.oop);
-        // start from the checkpoint determined by diagnostic, but if mastery is low, may recommend earlier checkpoint for review
+        // start from the checkpoint determined by diagnostic, but if mastery is low,
+        // may recommend earlier checkpoint for review
         int startIdx = order.indexOf(start);
         if (startIdx < 0)
             startIdx = 0;
-        // first try to find an incomplete lesson in the current checkpoint or later, prioritizing the current checkpoint
+        // first try to find an incomplete lesson in the current checkpoint or later,
+        // prioritizing the current checkpoint
         for (int i = startIdx; i < order.size(); i++) {
             Checkpoint cp = order.get(i);
             double mastery = masteryMap.getOrDefault(cp, 0.0);
@@ -381,10 +383,13 @@ public class LearnService {
 
         return mastery;
     }
-    // helper to build embedding text for a lesson block, including markdown, video title/description, and quiz question/options if applicable
+
+    // helper to build embedding text for a lesson block, including markdown, video
+    // title/description, and quiz question/options if applicable
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }
+
     // helper to map numeric difficulty to level tag
     private String mapLevelTag(int difficulty) {
         return difficulty == 1 ? "Beginner"
@@ -519,7 +524,8 @@ public class LearnService {
         List<Lesson> allLessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
 
         List<LessonSummaryResponse> recommended = new ArrayList<>();
-        // iterate over weakest areas and find the first accessible, not completed lesson for recommendation
+        // iterate over weakest areas and find the first accessible, not completed
+        // lesson for recommendation
         for (Checkpoint cp : orderedWeakAreas) {
             List<Lesson> cpLessons = allLessons.stream()
                     .filter(l -> l.getCheckpoint() == cp)
@@ -696,5 +702,28 @@ public class LearnService {
                 status,
                 progressPercent,
                 locked);
+    }
+
+    @Transactional
+    public void ensureMasteryInitialized(User user) {
+        ensureMasteryBootstrapped(user);
+    }
+
+    @Transactional(readOnly = true)
+    public String getAccessLevel(User user) {
+        ensureMasteryBootstrapped(user);
+
+        Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user)
+                .stream()
+                .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
+
+        Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
+                .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
+
+        int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
+
+        return userMaxDifficulty == 3 ? "Advanced"
+                : userMaxDifficulty == 2 ? "Intermediate"
+                        : "Beginner";
     }
 }

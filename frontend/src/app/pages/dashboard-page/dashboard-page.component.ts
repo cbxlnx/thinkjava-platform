@@ -142,8 +142,8 @@ export class DashboardPageComponent implements OnInit {
       }
     });
   }
- // Later: separate out into a "recommendations" service that can be 
- // used across dashboard and learn pages, and can return both pre-diagnostic and post-quiz recommendations based on context
+  // Later: separate out into a "recommendations" service that can be 
+  // used across dashboard and learn pages, and can return both pre-diagnostic and post-quiz recommendations based on context
   loadDashboardSummary() {
     this.dashboardService.getSummary().subscribe({
       next: (res) => {
@@ -253,7 +253,7 @@ export class DashboardPageComponent implements OnInit {
   }
 
   get ringDashoffset(): number {
-    const p = this.masteryPercent;
+    const p = this.diagnosticPercent;
     return this.ringDasharray - (this.ringDasharray * p) / 100;
   }
 
@@ -285,6 +285,18 @@ export class DashboardPageComponent implements OnInit {
 
   get hasDiagnosticScore(): boolean {
     return this.diagnosticScorePercent !== null;
+  }
+
+  get diagnosticPercent(): number {
+    return this.dashboardSummary?.masteryPercent ?? 0;
+  }
+
+  get diagnosticLevel(): 'Beginner' | 'Intermediate' | 'Advanced' {
+    return this.dashboardSummary?.masteryLabel ?? 'Beginner';
+  }
+
+  get topicReadinessItems(): { key: string; label: string; value: number }[] {
+    return this.checkpointMasteryItems;
   }
 
   // -----------------------------
@@ -350,39 +362,39 @@ System.out.println(scores[0]);`;
   }
   // For the checkpoint mastery bars on the dashboard
   get checkpointMasteryItems(): { key: string; label: string; value: number }[] {
-  const cp = this.dashboardSummary?.checkpointMastery ?? {};
+    const cp = this.dashboardSummary?.checkpointMastery ?? {};
 
-  return [
-    { key: 'fundamentals', label: 'Fundamentals', value: this.clampPercent(cp['fundamentals']) },
-    { key: 'loops', label: 'Loops', value: this.clampPercent(cp['loops']) },
-    { key: 'arrays', label: 'Arrays', value: this.clampPercent(cp['arrays']) },
-    { key: 'methods', label: 'Methods', value: this.clampPercent(cp['methods']) },
-    { key: 'oop', label: 'OOP', value: this.clampPercent(cp['oop']) },
-  ];
-}
-
-get chartLinePoints(): string {
-  const items = this.checkpointMasteryItems;
-  const height = 320;
-  const width = 500;
-
-  if (!items || items.length === 0) {
-    return '';
+    return [
+      { key: 'fundamentals', label: 'Fundamentals', value: this.clampPercent(cp['fundamentals']) },
+      { key: 'loops', label: 'Loops', value: this.clampPercent(cp['loops']) },
+      { key: 'arrays', label: 'Arrays', value: this.clampPercent(cp['arrays']) },
+      { key: 'methods', label: 'Methods', value: this.clampPercent(cp['methods']) },
+      { key: 'oop', label: 'OOP', value: this.clampPercent(cp['oop']) },
+    ];
   }
 
-  const step = width / (items.length - 1);
+  get chartLinePoints(): string {
+    const items = this.checkpointMasteryItems;
+    const height = 320;
+    const width = 500;
 
-  return items
-    .map((item, index) => {
-      const x = index * step;
-      const y = height - (item.value / 100) * height;
-      return `${x},${y}`;
-    })
-    .join(' ');
-}
-private clampPercent(value: number | null | undefined): number {
-  return Math.max(0, Math.min(100, Math.round(value ?? 0)));
-}
+    if (!items || items.length === 0) {
+      return '';
+    }
+
+    const step = width / (items.length - 1);
+
+    return items
+      .map((item, index) => {
+        const x = index * step;
+        const y = height - (item.value / 100) * height;
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }
+  private clampPercent(value: number | null | undefined): number {
+    return Math.max(0, Math.min(100, Math.round(value ?? 0)));
+  }
   // For the overall course progress circle on the dashboard - could be based on
   //  number of lessons completed vs total, or could be an average of checkpoint mastery percentages
   private calculateCourseProgress(lessons: any[]): void {
@@ -397,29 +409,29 @@ private clampPercent(value: number | null | undefined): number {
   // For the checkpoint progress bars on the dashboard - calculates
   //  completed vs total lessons for each checkpoint to show progress within that topic
   private buildCheckpointProgress(lessons: any[]): void {
-  const checkpointOrder = ['fundamentals', 'loops', 'arrays', 'methods', 'oop'];
+    const checkpointOrder = ['fundamentals', 'loops', 'arrays', 'methods', 'oop'];
 
-  const labelMap: Record<string, string> = {
-    fundamentals: 'Fundamentals',
-    loops: 'Loops',
-    arrays: 'Arrays',
-    methods: 'Methods',
-    oop: 'OOP'
-  };
-
-  this.checkpointProgressItems = checkpointOrder.map((checkpoint) => {
-    const topicLessons = lessons.filter((l) => l.checkpoint === checkpoint);
-    const completed = topicLessons.filter((l) => l.status === 'completed').length;
-    const total = topicLessons.length;
-    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    return {
-      label: labelMap[checkpoint] ?? checkpoint,
-      completed,
-      total,
-      percent
+    const labelMap: Record<string, string> = {
+      fundamentals: 'Fundamentals',
+      loops: 'Loops',
+      arrays: 'Arrays',
+      methods: 'Methods',
+      oop: 'OOP'
     };
-  });
-}
+
+    this.checkpointProgressItems = checkpointOrder.map((checkpoint) => {
+      const topicLessons = lessons.filter((l) => l.checkpoint === checkpoint);
+      const completed = topicLessons.filter((l) => l.status === 'completed').length;
+      const total = topicLessons.length;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      return {
+        label: labelMap[checkpoint] ?? checkpoint,
+        completed,
+        total,
+        percent
+      };
+    });
+  }
 
 }

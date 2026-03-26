@@ -304,7 +304,7 @@
 }
 
 .ring-num{
-  font-size: 22px;
+  font-size: 12px;
   font-weight: 800;
   color:#6d3bff;
   line-height: 1;
@@ -1245,7 +1245,7 @@
 
 .ring-sub {
   margin-top: 0.25rem;
-  font-size: 0.82rem;
+  font-size: 0.68rem;
   font-weight: 500;
   color: #6f678f;
 }
@@ -1340,10 +1340,6 @@
 
   .ring-num {
     font-size: 1.7rem;
-  }
-
-  .ring-sub {
-    font-size: 0.78rem;
   }
 
   .mastery-note {

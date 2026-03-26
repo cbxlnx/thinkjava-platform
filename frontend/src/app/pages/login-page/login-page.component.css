@@ -224,3 +224,8 @@
   border-radius: 999px;
   border: 1px solid rgba(124, 58, 237, 0.16);
 }
+
+.input-error {
+  border-color: #dc2626 !important;
+  background: #fff5f5;
+}
