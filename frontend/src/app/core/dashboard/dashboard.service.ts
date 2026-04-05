@@ -10,6 +10,7 @@ export type ActivityItem = {
   pill: string;
 };
 
+//  structure of the response from the dashboard summary API endpoint
 export type DashboardSummaryResponse = {
   masteryPercent: number;
   masteryLabel: 'Beginner' | 'Intermediate' | 'Advanced';
@@ -26,6 +27,7 @@ export type DashboardSummaryResponse = {
 export class DashboardService {
   constructor(private http: HttpClient) {}
 
+  // fetches the dashboard summary data from the backend API
   getSummary(): Observable<DashboardSummaryResponse> {
     return this.http.get<DashboardSummaryResponse>(`${API_BASE_URL}/api/dashboard/summary`);
   }

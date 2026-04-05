@@ -38,6 +38,21 @@ yarn-debug.log
 /coverage
 testem.log
 __screenshots__/
+playwright-report/
+test-results/
+blob-report/
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
+# frontend build artifacts
+frontend/dist/
+frontend/.angular/
+chunk-*.js
+chunk-*.css
+polyfills.js
+test_main.js
+spec-*.js
 
 # ==================================================
 # Backend (Spring Boot / Maven)

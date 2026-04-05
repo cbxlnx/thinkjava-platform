@@ -236,7 +236,7 @@ public class LearnService {
         }
 
         Map<UUID, String> answers = (req.answers() == null) ? Map.of() : req.answers();
-
+        // calculate score by comparing user answers to correct answers
         int correct = 0;
         for (LessonQuizQuestion q : questions) {
             String userAnswer = answers.get(q.getId());
@@ -248,7 +248,7 @@ public class LearnService {
 
         double score = (double) correct / questions.size();
         boolean passed = score >= PASS_THRESHOLD;
-
+        // update progress with new quiz score and completion status
         LessonProgress p = progressRepository.findByUserAndLessonId(user, lessonId)
                 .orElseGet(LessonProgress::new);
 
@@ -266,9 +266,9 @@ public class LearnService {
         }
 
         progressRepository.save(p);
-
+        // recompute mastery for the checkpoint of this lesson based on updated progress
         double updatedCheckpointMastery = recomputeCheckpointMastery(user, lesson.getCheckpoint());
-
+        // recommend next lesson based on updated mastery and progress
         Map<Checkpoint, Double> masteryMap = masteryRepository.findByUser(user)
                 .stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
@@ -284,7 +284,7 @@ public class LearnService {
         if (correctJson == null || correctJson.isBlank()) {
             return null;
         }
-
+        // try parsing as JSON to handle both string and array formats, but fall back to raw string if parsing fails
         try {
             JsonNode node = objectMapper.readTree(correctJson);
 
@@ -315,7 +315,7 @@ public class LearnService {
     private double recomputeCheckpointMastery(User user, Checkpoint checkpoint) {
         DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Diagnostic not completed"));
-
+        // map diagnostic result level to numeric baseline mastery value
         double baseline = switch (checkpoint) {
             case fundamentals -> mapLevel(dr.getFundamentals());
             case loops -> mapLevel(dr.getLoops());
@@ -323,13 +323,13 @@ public class LearnService {
             case methods -> mapLevel(dr.getMethods());
             case oop -> mapLevel(dr.getOop());
         };
-
+        // get all lessons for this checkpoint to calculate completion ratio
         List<Lesson> checkpointLessons = lessonRepository
                 .findByActiveTrueOrderByCheckpointAscOrderIndexAsc()
                 .stream()
                 .filter(l -> l.getCheckpoint() == checkpoint)
                 .toList();
-
+        // if no lessons, mastery is just the baseline
         Mastery m = masteryRepository.findByUserAndCheckpoint(user, checkpoint)
                 .orElseGet(Mastery::new);
 
@@ -337,7 +337,7 @@ public class LearnService {
         m.setCheckpoint(checkpoint);
 
         double mastery;
-
+        // if no lessons for this checkpoint, mastery is just the baseline from diagnostic
         if (checkpointLessons.isEmpty()) {
             mastery = baseline;
         } else {
@@ -345,38 +345,40 @@ public class LearnService {
             Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user)
                     .stream()
                     .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
-
+            // count how many checkpoint lessons are completed
             long completedCount = checkpointLessons.stream()
+                     // filter lessons that have progress marked as completed
                     .filter(l -> {
                         LessonProgress p = progressMap.get(l.getId());
                         return p != null && p.getStatus() == LessonStatus.completed;
                     })
                     .count();
-
+            // calculate completion ratio as completed lessons over total checkpoint lessons
             double completionRatio = (double) completedCount / checkpointLessons.size();
-
+            // calculate average quiz score across all checkpoint lessons that have quiz scores
             List<Double> checkpointQuizScores = checkpointLessons.stream()
                     .map(l -> progressMap.get(l.getId()))
                     .filter(Objects::nonNull)
                     .map(LessonProgress::getBestQuizScore)
                     .filter(Objects::nonNull)
                     .toList();
-
+            // if no quiz scores, average is 0, otherwise calculate the average quiz score
             double avgQuizScore = checkpointQuizScores.isEmpty()
                     ? 0.0
                     : checkpointQuizScores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-
+             // combine completion ratio and average quiz score to calculate overall progress score for mastery update
             double progressScore = (0.5 * completionRatio) + (0.5 * avgQuizScore);
-
+            // if completion ratio is 100%, mastery is 100%, otherwise calculate mastery as 
+            // baseline plus progress score scaled to the remaining mastery range
             if (completionRatio >= 1.0) {
                 mastery = 1.0;
             } else {
                 mastery = baseline + ((1.0 - baseline) * progressScore);
             }
         }
-
+        // ensure mastery is between 0 and 1
         mastery = clamp(mastery, 0.0, 1.0);
-
+        // update or create Mastery entity with new mastery value and current timestamp
         m.setMasteryValue(mastery);
         m.setUpdatedAt(Instant.now());
         masteryRepository.save(m);
@@ -396,7 +398,8 @@ public class LearnService {
                 : difficulty == 2 ? "Intermediate"
                         : "Advanced";
     }
-
+    // method to recompute mastery for all checkpoints, 
+    // used for debugging or if we want to trigger a full recalculation (e.g. after improving mastery algorithm)
     @Transactional
     public void recomputeAllCheckpointMastery(User user) {
         for (Checkpoint cp : Checkpoint.values()) {
@@ -410,10 +413,10 @@ public class LearnService {
     private void ensureMasteryBootstrapped(User user) {
         if (!masteryRepository.findByUser(user).isEmpty())
             return;
-
+        // if no mastery records exist for this user, bootstrap from diagnostic result
         DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Diagnostic not completed"));
-
+        // create Mastery records for each checkpoint based on diagnostic result levels
         Instant now = Instant.now();
 
         createMastery(user, Checkpoint.fundamentals, mapLevel(dr.getFundamentals()), now);
@@ -422,7 +425,7 @@ public class LearnService {
         createMastery(user, Checkpoint.methods, mapLevel(dr.getMethods()), now);
         createMastery(user, Checkpoint.oop, mapLevel(dr.getOop()), now);
     }
-
+    // helper to create and save a Mastery record for a user and checkpoint with given mastery value and timestamp
     private void createMastery(User user, Checkpoint cp, double value, Instant now) {
         Mastery m = new Mastery();
         m.setUser(user);
@@ -431,7 +434,8 @@ public class LearnService {
         m.setUpdatedAt(now);
         masteryRepository.save(m);
     }
-
+    // helper to map diagnostic result level string to a numeric mastery value 
+    // between 0 and 1 for initial mastery bootstrapping and updates
     private double mapLevel(String level) {
         if (level == null)
             return 0.0;
@@ -444,7 +448,8 @@ public class LearnService {
             default -> 0.0;
         };
     }
-
+    // helper to determine progress percentage for a lesson based on its status, 
+    // used for frontend display of progress bars
     private int progressForStatus(String status) {
         return switch (status) {
             case "completed" -> 100;
@@ -459,21 +464,22 @@ public class LearnService {
     @Transactional
     public AllLessonsResponse getAllLessons(User user) {
         ensureMasteryBootstrapped(user);
-
+        // get mastery for all checkpoints to determine user level and locking logic
         Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user)
                 .stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
-
+        // get progress for all lessons to determine completion status and locking logic
         Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
                 .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
 
         int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
-
+        // determine user level based on max difficulty of accessible lessons, 
+        // which is influenced by mastery and progression
         String userLevel = userMaxDifficulty == 3 ? "Advanced"
                 : userMaxDifficulty == 2 ? "Intermediate"
                         : "Beginner";
         List<Lesson> lessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
-
+        // map lessons to response DTOs with status and locking information based on progress and mastery
         var out = lessons.stream().map(l -> {
             LessonProgress p = progressMap.get(l.getId());
             String status = (p == null) ? "not_started" : p.getStatus().name().toLowerCase();
@@ -483,7 +489,7 @@ public class LearnService {
 
             String levelTag = l.getDifficulty() == 1 ? "Beginner"
                     : l.getDifficulty() == 2 ? "Intermediate" : "Advanced";
-
+            
             return new LessonSummaryResponse(
                     l.getId(),
                     l.getTitle(),
@@ -499,28 +505,35 @@ public class LearnService {
 
         return new AllLessonsResponse(userLevel, out);
     }
-
+    // helper to determine the effective maximum difficulty of lessons 
+    // that should be accessible to the user based on their mastery and progression,
     private boolean isLocked(Lesson lesson, String status, int userMaxDifficulty) {
         boolean completed = "completed".equals(status);
         return !completed && lesson.getDifficulty() > userMaxDifficulty;
     }
 
+    // main method to get personalized lesson recommendations for the user based on their weakest mastery areas and progression, 
+    // used for the dashboard and recommendation endpoints
     @Transactional
     public LearnRecommendationsResponse getRecommendations(User user) {
         ensureMasteryBootstrapped(user);
 
+        // get mastery for all checkpoints to identify weakest areas for recommendation prioritization
         Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user)
                 .stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
+
         // get progress for all lessons to determine completion and locking
         Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
                 .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
         int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
+
+        // order checkpoints by weakest mastery first to prioritize recommendations from those areas
         List<Checkpoint> orderedWeakAreas = mastery.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue()) // weakest first
                 .map(Map.Entry::getKey)
                 .toList();
-
+        // get all lessons to filter and find recommendations based on weakest checkpoints, completion status, and locking
         List<Lesson> allLessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
 
         List<LessonSummaryResponse> recommended = new ArrayList<>();
@@ -531,7 +544,9 @@ public class LearnService {
                     .filter(l -> l.getCheckpoint() == cp)
                     .sorted(Comparator.comparingInt(Lesson::getOrderIndex))
                     .toList();
-
+                    
+            // within this checkpoint, prioritize lessons that are not started or in progress and not locked, 
+            // but skip completed or locked lessons
             for (Lesson l : cpLessons) {
                 LessonProgress p = progressMap.get(l.getId());
                 String status = (p == null) ? "not_started" : p.getStatus().name().toLowerCase();
@@ -541,7 +556,7 @@ public class LearnService {
 
                 if (locked || completed)
                     continue;
-
+                // this lesson is a candidate for recommendation, map to summary response with locking and progress info
                 int progressPercent = progressForStatus(status);
                 String levelTag = l.getDifficulty() == 1 ? "Beginner"
                         : l.getDifficulty() == 2 ? "Intermediate" : "Advanced";
@@ -565,7 +580,8 @@ public class LearnService {
             if (recommended.size() >= 3)
                 break;
         }
-
+        // determine the primary recommendation for the dashboard, 
+        // which is the first in the list of recommendations from the weakest area,
         UUID primaryLessonId = recommended.isEmpty() ? null : recommended.get(0).id();
         Checkpoint primaryCheckpoint = recommended.isEmpty() ? null : recommended.get(0).checkpoint();
 
@@ -583,22 +599,24 @@ public class LearnService {
     @Transactional
     public LessonSummaryResponse getCurrentFocus(User user) {
         ensureMasteryBootstrapped(user);
-
+        // get mastery and progress to determine locking and recommendation logic
         Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user).stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
-
+        // get progress for all lessons to find in-progress lessons and determine locking
         Map<UUID, LessonProgress> progressMap = progressRepository.findByUser(user).stream()
                 .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
 
         int userMaxDifficulty = getEffectiveMaxDifficulty(user, mastery, progressMap);
-
+        // first try to find an in-progress lesson that is not locked, prioritizing the most recently accessed ones
         List<Lesson> lessons = lessonRepository.findByActiveTrueOrderByCheckpointAscOrderIndexAsc();
 
-        // prefer an in progress lesson that is still accessible
+        // check if any in-progress lesson is available and not locked, and return it as the current focus
         for (Lesson l : lessons) {
             LessonProgress p = progressMap.get(l.getId());
+            // if lesson is in progress, check if it's locked based on difficulty and user max difficulty, and recommend if not locked
             if (p != null && p.getStatus() == LessonStatus.in_progress) {
                 boolean locked = l.getDifficulty() > userMaxDifficulty;
+                // if the in-progress lesson is not locked, return it as the current focus for the user
                 if (!locked) {
                     return mapToSummary(l, p, userMaxDifficulty);
                 }
@@ -613,7 +631,7 @@ public class LearnService {
 
         return null;
     }
-
+    // method to reset mastery values for all checkpoints back to the diagnostic baseline,
     @Transactional
     public void resetMasteryFromDiagnostic(User user) {
         DiagnosticResult dr = diagnosticRepository.findByUserId(user.getId())
@@ -703,16 +721,16 @@ public class LearnService {
                 progressPercent,
                 locked);
     }
-
+    // method to ensure mastery records are initialized for a user based on their diagnostic result,
     @Transactional
     public void ensureMasteryInitialized(User user) {
         ensureMasteryBootstrapped(user);
     }
-
+    // method to get the user's current access level (Beginner, Intermediate, Advanced) based on their mastery and progression,
     @Transactional(readOnly = true)
     public String getAccessLevel(User user) {
         ensureMasteryBootstrapped(user);
-
+        
         Map<Checkpoint, Double> mastery = masteryRepository.findByUser(user)
                 .stream()
                 .collect(Collectors.toMap(Mastery::getCheckpoint, Mastery::getMasteryValue));
