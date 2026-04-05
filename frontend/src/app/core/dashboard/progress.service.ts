@@ -15,6 +15,6 @@ export class ProgressService {
   constructor(private http: HttpClient) {}
 
   getMasterySnapshot(): Observable<MasteryDto[]> {
-    return this.http.get<MasteryDto[]>(`${API_BASE_URL}/mastery`);
+    return this.http.get<MasteryDto[]>(`${API_BASE_URL}/api/mastery`);
   }
 }

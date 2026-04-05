@@ -25,15 +25,7 @@ public class OpenAiEmbeddingService {
     @Value("${openai.embedding.model:text-embedding-3-small}")
     private String embeddingModel;
 
-    @PostConstruct
-public void debugKey() {
-    System.out.println("Embedding key present: " + (apiKey != null && !apiKey.isBlank()));
-    System.out.println("Embedding key length: " + (apiKey == null ? 0 : apiKey.length()));
-    if (apiKey != null) {
-        System.out.println("Embedding key prefix: " + apiKey.substring(0, Math.min(7, apiKey.length())));
-    }
-}
-
+    // method to create an embedding vector for a given text input by calling the OpenAI API
     public String createEmbedding(String text) {
         try {
             String url = "https://api.openai.com/v1/embeddings";
@@ -46,7 +38,8 @@ public void debugKey() {
                     new EmbeddingRequest(embeddingModel, text));
 
             HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
-
+                // make the API call to OpenAI and parse the response to extract the embedding vector as a list of doubles, 
+                // then convert it to a string format for storage
             ResponseEntity<String> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
@@ -55,13 +48,13 @@ public void debugKey() {
 
             JsonNode root = objectMapper.readTree(response.getBody());
             JsonNode embeddingNode = root.path("data").get(0).path("embedding");
-
+                // convert the embedding vector to a list of doubles and then to a comma-separated string format
             List<Double> values = objectMapper.convertValue(
                     embeddingNode,
                     objectMapper.getTypeFactory()
                             .constructCollectionType(List.class, Double.class));
-
-            List<String> stringValues = values.stream()
+                // convert the list of doubles to a list of strings for easier storage and debugging
+            List<String> stringValues = values.stream() 
                     .map(Object::toString)
                     .collect(Collectors.toList());
             

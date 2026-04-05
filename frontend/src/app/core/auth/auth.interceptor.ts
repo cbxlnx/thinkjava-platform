@@ -8,7 +8,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // optional: don't add token to auth calls
   if (!token || req.url.includes('/api/auth/')) return next(req);
-
+  // add the Authorization header with the token for all other requests
   return next(req.clone({
     setHeaders: { Authorization: `Bearer ${token}` }
   }));

@@ -49,10 +49,10 @@ public class LessonSectionEmbeddingService {
 
         return sb.toString().trim();
     }
-
+    // method to embed all sections of a lesson by generating embedding text and vectors for each section and updating the database
     public void embedAllSectionsForLesson(UUID lessonId) {
         List<LessonBlock> blocks = blockRepository.findByLessonIdOrderByOrderIndexAsc(lessonId);
-
+        // iterate through each block and generate embedding if it doesn't already exist
         for (LessonBlock block : blocks) {
             if (block.getEmbedding() != null && !block.getEmbedding().isBlank()) {
                 continue;
@@ -66,7 +66,7 @@ public class LessonSectionEmbeddingService {
             System.out.println("Embedded section " + block.getOrderIndex() + " for lesson " + lessonId);
         }
     }
-
+    // helper method to extract text content from a JSON string, used for quiz payloads
     private String extractTextFromJson(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
@@ -77,7 +77,7 @@ public class LessonSectionEmbeddingService {
             return json;
         }
     }
-
+    // recursive method to traverse a JSON node and collect all textual content into a StringBuilder
     private void collectText(JsonNode node, StringBuilder sb) {
         if (node == null) return;
 
