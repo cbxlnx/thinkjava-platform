@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/secure")
 public class SecureController {
-
+  // A simple endpoint to test authentication, 
+  // returning a message with the authenticated user's username
   @GetMapping("/me")
   public ResponseEntity<?> me(@AuthenticationPrincipal UserDetails user) {
     if (user == null) {

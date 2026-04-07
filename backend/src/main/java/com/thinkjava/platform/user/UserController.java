@@ -26,7 +26,8 @@ public class UserController {
 
     return ResponseEntity.ok(new UserMeResponse(user.getEmail(), user.getFirstName()));
   }
-
+  // endpoint to update the user's first name, 
+  // accepting an UpdateNameRequest with the new name,
   @PatchMapping("/me/name")
   public ResponseEntity<UserMeResponse> updateName(
       Authentication authentication,

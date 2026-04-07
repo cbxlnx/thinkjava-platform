@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-// Controller class for handling learning-related API endpoints
+// exposes learning endpoints used by the frontend
 @RestController
 @RequestMapping("/api/learn")
 @CrossOrigin(origins = "http://localhost:4200")
@@ -31,16 +31,19 @@ public class LearnController {
     this.userService = userService;
   }
 
+  // returns the learner's structured path
   @GetMapping("/path")
   public LearnPathResponse path(@AuthenticationPrincipal User user) {
     return learnService.getPath(user);
   }
 
+  // loads a single lesson with its content and quiz
   @GetMapping("/lesson/{id}")
   public LessonResponse lesson(@AuthenticationPrincipal User user, @PathVariable UUID id) {
     return learnService.getLesson(user, id);
   }
 
+  // grades a lesson quiz submission
   @PostMapping("/lesson/{id}/quiz/submit")
   public LessonQuizSubmitResponse submitQuiz(
       @AuthenticationPrincipal User user,
@@ -49,24 +52,29 @@ public class LearnController {
     return learnService.submitQuiz(user, id, req);
   }
 
+  // resolves the authenticated user from the token email
   @GetMapping("/lessons")
   public AllLessonsResponse allLessons(@AuthenticationPrincipal(expression = "username") String email) {
     if (email == null)
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing/invalid token");
+
     User user = userService.findByEmail(email).orElseThrow();
     return learnService.getAllLessons(user);
   }
 
+  // returns lesson recommendations based on learner progress
   @GetMapping("/recommendations")
   public LearnRecommendationsResponse recommendations(
       @AuthenticationPrincipal(expression = "username") String email) {
     if (email == null) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing/invalid token");
     }
+
     User user = userService.findByEmail(email).orElseThrow();
     return learnService.getRecommendations(user);
   }
 
+  // returns the next lesson the learner should focus on
   @GetMapping("/current-focus")
   public LessonSummaryResponse currentFocus(@AuthenticationPrincipal User user) {
     if (user == null) {
@@ -75,12 +83,13 @@ public class LearnController {
     return learnService.getCurrentFocus(user);
   }
 
+  // debug endpoint to rebuild checkpoint mastery values
   @PostMapping("/debug/recompute-mastery")
   public void recomputeMastery(@AuthenticationPrincipal User user) {
     if (user == null) {
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user");
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing user");
     }
-    learnService.recomputeAllCheckpointMastery(user);
-}
 
+    learnService.recomputeAllCheckpointMastery(user);
+  }
 }

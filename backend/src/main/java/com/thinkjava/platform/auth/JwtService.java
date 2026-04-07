@@ -15,7 +15,7 @@ public class JwtService {
 
   @Value("${app.jwt.expirationMillis}")
   private long expiration;
-
+  // method to generate a JWT token for a given subjectwith an expiration time
   public String generate(String subject){
     Date now = new Date();
     Date exp = new Date(now.getTime() + expiration);
@@ -26,7 +26,8 @@ public class JwtService {
         .signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
         .compact();
   }
-
+  // method to validate a JWT token and extract the subject (email) from it,
+  // throwing an exception if the token is invalid or expired
   public String validateAndGetSubject(String token){
     return Jwts.parser()
         .verifyWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))

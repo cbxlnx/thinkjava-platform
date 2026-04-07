@@ -30,7 +30,8 @@ public class AuthController {
         this.jwtService = jwtService;
         this.authManager = authManager;
     }
-
+    // endpoint for user registration, accepting a RegisterRequest with email and password,
+    // creating a new user and returning a JWT token if successful, or an error message if the email is already in use
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
@@ -47,7 +48,8 @@ public class AuthController {
                     .body(Map.of("error", ex.getMessage()));
         }
     }
-
+    // endpoint for user login, accepting a LoginRequest with email and password,
+    // authenticating the user and returning a JWT token if successful, or an error message if
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {

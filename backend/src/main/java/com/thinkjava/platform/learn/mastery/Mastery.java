@@ -9,26 +9,32 @@ import java.util.UUID;
 
 @Entity
 @Table(
+    // stores one mastery row per user and checkpoint
     name = "mastery",
     uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "checkpoint"})
 )
 public class Mastery {
 
+  // primary key for the mastery row
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
+  // learner that owns this checkpoint mastery
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
+  // learning checkpoint this mastery value belongs to
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private Checkpoint checkpoint;
 
+  // normalized mastery score for the checkpoint
   @Column(name = "mastery_value", nullable = false)
   private double masteryValue;
 
+  // last time this mastery value was recalculated
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
  
