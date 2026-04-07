@@ -26,11 +26,36 @@ public class User implements UserDetails {
   @Column(name = "first_name")
   private String firstName;
   
-  // UserDetails
-  @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
-  @Override public String getUsername() { return email; }
-  @Override public boolean isAccountNonExpired() { return true; }
-  @Override public boolean isAccountNonLocked() { return true; }
-  @Override public boolean isCredentialsNonExpired() { return true; }
-  @Override public boolean isEnabled() { return true; }
+  // user entity implementing Spring Security’s UserDetails interface
+  @Override
+  // method to return the authorities granted to the user, 
+  // which is empty in this case since we have no roles or permissions
+  public Collection<? extends GrantedAuthority> getAuthorities() {
+    return List.of();
+  }
+
+  @Override
+  public String getUsername() {
+    return email;
+  }
+
+  @Override
+  public boolean isAccountNonExpired() {
+    return true;
+  }
+
+  @Override
+  public boolean isAccountNonLocked() {
+    return true;
+  }
+
+  @Override
+  public boolean isCredentialsNonExpired() {
+    return true;
+  }
+
+  @Override
+  public boolean isEnabled() {
+    return true;
+  }
 }

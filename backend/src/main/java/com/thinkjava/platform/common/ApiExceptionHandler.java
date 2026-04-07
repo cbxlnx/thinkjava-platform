@@ -11,7 +11,8 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
-
+    //  exception handler for when a user tries to register with an email that is already in use, 
+    // returning a 409 Conflict status with a JSON error message
     @ExceptionHandler(EmailAlreadyUsedException.class)
     public ResponseEntity<Map<String, Object>> handleEmailUsed(EmailAlreadyUsedException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
@@ -21,7 +22,8 @@ public class ApiExceptionHandler {
                 "message", ex.getMessage()
         ));
     }
-
+    // generic exception handler for IllegalArgumentException, 
+    // returning a 400 Bad Request status with a JSON error message
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(

@@ -182,29 +182,6 @@
   color: rgba(15, 23, 42, 0.60);
 }
 
-.barRow {
-  margin-top: 12px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  font-weight: 800;
-  color: rgba(15, 23, 42, 0.65);
-}
-
-.bar {
-  margin-top: 6px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.08);
-  overflow: hidden;
-}
-
-.barFill {
-  height: 100%;
-  border-radius: 999px;
-  background: #6366f1;
-}
-
 .btn {
   margin-top: 12px;
   border: 1px solid rgba(15, 23, 42, 0.10);
@@ -238,21 +215,6 @@
 
 .section-header {
   margin-bottom: 14px;
-
-  h3 {
-    margin: 0 0 6px;
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1.2;
-    color: #171717;
-  }
-
-  p {
-    margin: 0;
-    font-size: 15px;
-    color: #6b7280;
-    line-height: 1.5;
-  }
 }
 
 .recommendation-grid {
@@ -319,36 +281,6 @@
   font-size: 14px;
   color: #7b8194;
   line-height: 1.4;
-}
-
-.lesson-progress {
-  margin-top: auto;
-}
-
-.progress-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #5c6274;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  background: #ececf3;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: #6d48e5;
-  transition: width 0.25s ease;
 }
 
 .lesson-btn {

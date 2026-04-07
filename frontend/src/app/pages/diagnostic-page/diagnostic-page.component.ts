@@ -28,12 +28,11 @@ type ReviewItem = {
   isSkipped: boolean;
 };
 
-// selects a balanced set of questions
-// adapts difficulty within each topic
-// skips topics if the learner struggles
-// stops early if performance is very low
-// computes mastery per topic
-// sends results to the backend
+// runs the diagnostic from intro to result
+// builds a balanced quiz across checkpoints
+// adapts difficulty based on learner performance
+// stops early when enough placement evidence exists
+// sends the computed result to the backend
 @Component({
   selector: 'app-diagnostic-page',
   standalone: true,
@@ -41,81 +40,121 @@ type ReviewItem = {
   templateUrl: './diagnostic-page.component.html',
   styleUrls: ['./diagnostic-page.component.css'],
 })
-
 export class DiagnosticPageComponent {
+  // current screen state
   step: Step = 'INTRO';
 
-  // full pool 
+  // full question bank and current run selection
   all: Question[] = DIAGNOSTIC_QUESTIONS;
-
-  // these are selected per run 
   selectedPool: Question[] = [];
 
+  // checkpoint traversal state
   checkpoints: Checkpoint[] = [...CHECKPOINTS];
   currentCheckpointIndex = 0;
 
+  // per-checkpoint difficulty and performance tracking
   currentDifficulty: Difficulty = 1;
   askedThisCheckpoint = 0;
   correctThisCheckpoint = 0;
   wrongStreakBeginner = 0;
 
+  // overall quiz performance tracking
   globalAnswered = 0;
   globalCorrect = 0;
   globalWrongStreak = 0;
 
+  // current question and answers
   currentQuestion: Question | null = null;
   selected: AnswerOption | null = null;
-
   answers: Record<number, AnswerOrSkip> = {};
 
+  // result and review state
   reviewItems: ReviewItem[] = [];
   showReview = false;
-
   answeredCount = 0;
   totalQuestionsPlanned = MAX_QUESTIONS;
-
   resultJson: any = null;
 
+  // placement guardrails
   private readonly MIN_ADVANCED_IN_QUIZ = 2;
   private readonly MIN_ADVANCED_ATTEMPTED_FOR_ADVANCED = 1;
 
+  constructor(private diagnostic: DiagnosticService, private router: Router) {}
 
-  constructor(private diagnostic: DiagnosticService, private router: Router) { }
-
-  // START / RESET
+  // ---------------------------
+  // diagnostic lifecycle
+  // ---------------------------
   start() {
+    // move into quiz mode
     this.step = 'QUIZ';
     this.answers = {};
     this.resultJson = null;
 
+    // reset overall counters
     this.answeredCount = 0;
     this.globalAnswered = 0;
     this.globalCorrect = 0;
     this.globalWrongStreak = 0;
 
+    // restart from the first checkpoint
     this.currentCheckpointIndex = 0;
 
+    // clear result-only state
     this.reviewItems = [];
     this.showReview = false;
     this.resetCheckpointState();
 
-    // build the quiz: proportioned selection (2 per topic by default)
+    // build a balanced quiz for this run
     this.selectedPool = this.buildSelectedPool();
 
-    // real total = how many we managed to select
+    // cap the planned total to what was actually selected
     this.totalQuestionsPlanned = Math.min(MAX_QUESTIONS, this.selectedPool.length);
 
     this.loadNextQuestion();
   }
 
+  retake() {
+    // return to the intro screen
+    this.step = 'INTRO';
+    this.currentQuestion = null;
+    this.selected = null;
+    this.answers = {};
+    this.selectedPool = [];
+    this.resultJson = null;
+
+    this.answeredCount = 0;
+    this.totalQuestionsPlanned = MAX_QUESTIONS;
+    this.currentCheckpointIndex = 0;
+
+    // clear review and result data
+    this.reviewItems = [];
+    this.showReview = false;
+    this.resetCheckpointState();
+  }
+
+  exitDiagnostic() {
+    // protect in-progress quiz state
+    if (this.step === 'QUIZ') {
+      const confirmed = window.confirm(
+        'Are you sure you want to leave the assessment? Your current progress will be lost.'
+      );
+      if (!confirmed) return;
+    }
+
+    this.router.navigate(['/dashboard']);
+  }
+
   private resetCheckpointState() {
+    // restart checkpoint progression at beginner level
     this.currentDifficulty = 1;
     this.askedThisCheckpoint = 0;
     this.correctThisCheckpoint = 0;
     this.wrongStreakBeginner = 0;
   }
 
-  // UI HELPERS
+  // ---------------------------
+  // ui getters
+  // ---------------------------
   get checkpointLabel() {
     const cp = this.currentQuestion?.checkpoint;
     if (!cp) return '';
@@ -131,7 +170,6 @@ export class DiagnosticPageComponent {
   }
 
   get questionNumber(): number {
-    // on question 1 (answeredCount=0) => 1
     return Math.min(this.answeredCount + 1, this.totalQuestionsPlanned);
   }
 
@@ -140,36 +178,36 @@ export class DiagnosticPageComponent {
   }
 
   get progressPercent(): number {
-    // progress bar should be 0% at Q1, then grow after answering
     if (!this.totalQuestionsPlanned) return 0;
     return Math.min(100, (this.answeredCount / this.totalQuestionsPlanned) * 100);
   }
 
-  // result UI values
+  // result summary values
   get completionPercent(): number {
-    // this is the big ring percent show score
     return this.scorePercent;
   }
 
   get scorePercent(): number {
-  const attempted = Object.keys(this.answers).length;
-  if (!attempted) return 0;
+    const attempted = Object.keys(this.answers).length;
+    if (!attempted) return 0;
 
-  let correct = 0;
+    // count only correct non-skip answers
+    let correct = 0;
 
-  for (const q of this.selectedPool) {
-    const given = this.answers[q.id];
-    if (given !== 'SKIP' && given === q.correctOption) {
-      correct++;
+    for (const q of this.selectedPool) {
+      const given = this.answers[q.id];
+      if (given !== 'SKIP' && given === q.correctOption) {
+        correct++;
+      }
     }
-  }
 
-  return Math.round((correct / attempted) * 100);
-}
+    return Math.round((correct / attempted) * 100);
+  }
 
   get overallLevel(): string {
     const p = this.scorePercent;
 
+    // only allow advanced if advanced questions were actually attempted
     const advAttempted = this.advancedAttemptedCount();
     const canBeAdvanced = advAttempted >= this.MIN_ADVANCED_ATTEMPTED_FOR_ADVANCED;
 
@@ -178,11 +216,12 @@ export class DiagnosticPageComponent {
     return 'Beginner';
   }
 
-  // for result details
+  // result detail lists
   get strengths(): string[] {
     if (!this.resultJson) return [];
+
+    // surface the strongest checkpoints
     const list: string[] = [];
-    // show all strong areas, no more than 3 to avoid noise
     if (this.resultJson.fundamentals === 'Strong') list.push('Syntax');
     if (this.resultJson.loops === 'Strong') list.push('Loops');
     if (this.resultJson.arrays === 'Strong') list.push('Arrays');
@@ -191,11 +230,11 @@ export class DiagnosticPageComponent {
 
     return list;
   }
-  // if there are weak/unknown areas, show those as "Needs improvement"
-  // Otherwise show medium areas as "Could improve"
+
   get needsImprovement(): string[] {
     if (!this.resultJson) return [];
 
+    // map backend checkpoint keys to friendly labels
     const label: Record<Checkpoint, string> = {
       fundamentals: 'Syntax',
       loops: 'Loops',
@@ -214,23 +253,22 @@ export class DiagnosticPageComponent {
 
     const order: Checkpoint[] = ['fundamentals', 'loops', 'arrays', 'methods', 'oop'];
 
-    // 1) weak / unknown first
+    // weak or unknown areas take priority
     const weak = order.filter((k) => levels[k] === 'Weak' || levels[k] === 'Unknown');
     if (weak.length) return weak.map((k) => label[k]);
 
-    // 2) if no weak, recommend medium topics (pick top 1–2 so it doesn't look noisy)
+    // otherwise show the best medium-level improvement targets
     const medium = order.filter((k) => levels[k] === 'Medium');
     if (medium.length) return medium.slice(0, 2).map((k) => label[k]);
 
-    // 3) all Strong => allow "Looks solid"
     return [];
   }
 
-
   // ---------------------------
-  // QUIZ ENGINE
+  // quiz interactions
   // ---------------------------
   pick(option: AnswerOption) {
+    // keep the current selection in sync with the ui
     this.selected = option;
     if (!this.currentQuestion) return;
     this.answers[this.currentQuestion.id] = option;
@@ -238,17 +276,32 @@ export class DiagnosticPageComponent {
 
   next() {
     if (!this.currentQuestion || !this.selected) return;
+
+    // persist the chosen answer before scoring it
     this.answers[this.currentQuestion.id] = this.selected;
 
     const isCorrect = this.selected === this.currentQuestion.correctOption;
     this.processAnswer(isCorrect);
   }
-  
-  private processAnswer(isCorrect: boolean) {
-    // counts for UI / stopping
-    this.answeredCount++;
 
+  skipQuestion() {
+    if (!this.currentQuestion) return;
+
+    // record the skip but still count it as an attempted question
+    this.answers[this.currentQuestion.id] = 'SKIP';
+    this.selected = null;
+
+    this.processAnswer(false);
+  }
+
+  // ---------------------------
+  // quiz progression engine
+  // ---------------------------
+  private processAnswer(isCorrect: boolean) {
+    // update global progress used by the ui and stopping rules
+    this.answeredCount++;
     this.globalAnswered++;
+
     if (isCorrect) {
       this.globalCorrect++;
       this.globalWrongStreak = 0;
@@ -256,38 +309,38 @@ export class DiagnosticPageComponent {
       this.globalWrongStreak++;
     }
 
-    // per-checkpoint tracking
+    // update per-checkpoint state
     this.askedThisCheckpoint++;
     if (isCorrect) {
       this.correctThisCheckpoint++;
       if (this.currentDifficulty === 1) this.wrongStreakBeginner = 0;
-    } else {
-      if (this.currentDifficulty === 1) this.wrongStreakBeginner++;
+    } else if (this.currentDifficulty === 1) {
+      // track repeated misses at the easiest level
+      this.wrongStreakBeginner++;
     }
 
-    // stop if we already answered planned amount
+    // stop when the planned quiz size has been reached
     if (this.answeredCount >= this.totalQuestionsPlanned) {
       this.submit();
       return;
     }
 
-    // GLOBAL early stop:  prevents a struggling learner from being forced through all 10 questions 
-    // when the system already has enough evidence to place them at a beginner level
+    // stop early when performance clearly points to beginner placement
     const globalAccuracy = this.globalAnswered ? this.globalCorrect / this.globalAnswered : 0;
     if (this.globalAnswered >= 5 && (globalAccuracy < 0.25 || this.globalWrongStreak >= 4)) {
       this.finishAndSubmitEarly();
       return;
     }
 
-    // PER-CHECKPOINT early stop: 2 beginner wrong/skip in a row
-    //if a learner cannot answer beginner level questions the system should not escalate difficulty
+    // move on if beginner questions in this checkpoint are repeatedly missed
     if (this.currentDifficulty === 1 && this.wrongStreakBeginner >= 2) {
       this.moveToNextCheckpoint();
       return;
     }
 
-    // difficulty progression within checkpoint
+    // promote difficulty inside the checkpoint when performance is strong enough
     if (this.askedThisCheckpoint >= 2) {
+      // use recent checkpoint performance to decide whether to escalate
       const ratio = this.correctThisCheckpoint / this.askedThisCheckpoint;
 
       if (ratio >= 0.6 && this.currentDifficulty < 3) {
@@ -304,11 +357,10 @@ export class DiagnosticPageComponent {
     this.loadNextQuestion();
   }
 
-
   private loadNextQuestion() {
     const cp = this.checkpoints[this.currentCheckpointIndex];
 
-    // find the next unanswered question in this checkpoint, preferring lowest difficulty available
+    // prefer the current difficulty, but fall back to any unanswered question in the checkpoint
     const candidates = this.selectedPool
       .filter((q) => q.checkpoint === cp && this.answers[q.id] === undefined)
       .sort((a, b) => a.difficulty - b.difficulty);
@@ -316,21 +368,23 @@ export class DiagnosticPageComponent {
     const nextQ = candidates.find((q) => q.difficulty === this.currentDifficulty) ?? candidates[0];
 
     if (!nextQ) {
+      // no more questions remain for this checkpoint
       this.moveToNextCheckpoint();
       return;
     }
 
-    // align currentDifficulty with what we're actually showing
+    // keep the state aligned with the actual question being shown
     this.currentDifficulty = nextQ.difficulty;
-
     this.currentQuestion = nextQ;
     this.selected = null;
   }
 
   private moveToNextCheckpoint() {
+    // advance to the next topic area
     this.currentCheckpointIndex++;
 
     if (this.currentCheckpointIndex >= this.checkpoints.length) {
+      // submit once every checkpoint has been processed
       this.submit();
       return;
     }
@@ -344,106 +398,93 @@ export class DiagnosticPageComponent {
   }
 
   // ---------------------------
-  // SUBMIT / SCORE
+  // submission and scoring
   // ---------------------------
   submit() {
-  const stats: Record<string, { correct: number; total: number }> = {};
+    // build per-checkpoint scoring data from attempted questions
+    const stats: Record<string, { correct: number; total: number }> = {};
 
-  for (const q of this.selectedPool) {
-    const given = this.answers[q.id];
-    if (given === undefined) continue;
+    for (const q of this.selectedPool) {
+      const given = this.answers[q.id];
+      if (given === undefined) continue;
 
-    if (!stats[q.checkpoint]) stats[q.checkpoint] = { correct: 0, total: 0 };
-    stats[q.checkpoint].total++;
+      if (!stats[q.checkpoint]) stats[q.checkpoint] = { correct: 0, total: 0 };
+      stats[q.checkpoint].total++;
 
-    if (given !== 'SKIP' && given === q.correctOption) {
-      stats[q.checkpoint].correct++;
+      if (given !== 'SKIP' && given === q.correctOption) {
+        stats[q.checkpoint].correct++;
+      }
     }
+
+    // convert checkpoint accuracy into mastery labels
+    const level = (cp: string) => {
+      const s = stats[cp];
+      if (!s || s.total === 0) return 'Unknown';
+
+      const r = s.correct / s.total;
+      if (r >= 0.8) return 'Strong';
+      if (r >= 0.45) return 'Medium';
+      return 'Weak';
+    };
+
+    const levels = {
+      fundamentals: level('fundamentals'),
+      loops: level('loops'),
+      arrays: level('arrays'),
+      methods: level('methods'),
+      oop: level('oop'),
+    };
+
+    const payload = {
+      ...levels,
+      startModule: this.pickStartModule(levels),
+      diagnosticPercent: this.scorePercent,
+    };
+
+    // persist the result and show the result screen
+    this.diagnostic.complete(payload).subscribe({
+      next: (res) => {
+        this.resultJson = res;
+        this.reviewItems = this.buildReviewItems();
+        this.showReview = false;
+        this.step = 'RESULT';
+      },
+      error: () => {
+        this.resultJson = { ...payload, error: 'Failed to save result' };
+        this.reviewItems = this.buildReviewItems();
+        this.showReview = false;
+        this.step = 'RESULT';
+      },
+    });
   }
-
-  const level = (cp: string) => {
-    const s = stats[cp];
-    if (!s || s.total === 0) return 'Unknown';
-    const r = s.correct / s.total;
-
-    if (r >= 0.8) return 'Strong';
-    if (r >= 0.45) return 'Medium';
-    return 'Weak';
-  };
-
-  const levels = {
-    fundamentals: level('fundamentals'),
-    loops: level('loops'),
-    arrays: level('arrays'),
-    methods: level('methods'),
-    oop: level('oop'),
-  };
-
-  const payload = {
-    ...levels,
-    startModule: this.pickStartModule(levels),
-    diagnosticPercent: this.scorePercent,
-  };
-
-  this.diagnostic.complete(payload).subscribe({
-    next: (res) => {
-      this.resultJson = res;
-      this.reviewItems = this.buildReviewItems();
-      this.showReview = false;
-      this.step = 'RESULT';
-    },
-    error: () => {
-      this.resultJson = { ...payload, error: 'Failed to save result' };
-      this.reviewItems = this.buildReviewItems();
-      this.showReview = false;
-      this.step = 'RESULT';
-    },
-  });
-}
-
-
+  // picks the most appropriate starting module based on checkpoint performance, with a bias towards earlier topics
   pickStartModule(levels: Record<string, string>) {
     const order: Checkpoint[] = ['fundamentals', 'loops', 'arrays', 'methods', 'oop'];
 
+    // prioritize the first weak checkpoint
     const firstWeak = order.find((k) => levels[k] === 'Weak' || levels[k] === 'Unknown');
     if (firstWeak) return firstWeak;
 
+    // otherwise start from the first medium checkpoint
     const firstMedium = order.find((k) => levels[k] === 'Medium');
     if (firstMedium) return firstMedium;
 
-    return 'fundamentals'; // all Strong - doesn't really matter
+    return 'fundamentals';
   }
 
-
   // ---------------------------
-  // RESULT BUTTONS
+  // result actions
   // ---------------------------
   viewPath() {
+    // send the learner into the next main flow
     this.router.navigate(['/dashboard']);
   }
 
-  retake() {
-    this.step = 'INTRO';
-    this.currentQuestion = null;
-    this.selected = null;
-    this.answers = {};
-    this.selectedPool = [];
-    this.resultJson = null;
-
-    this.answeredCount = 0;
-    this.totalQuestionsPlanned = MAX_QUESTIONS;
-
-    this.currentCheckpointIndex = 0;
-
-    this.reviewItems = [];
-  this.showReview = false;
-    this.resetCheckpointState();
-  }
-
   // ---------------------------
-  // QUIZ SELECTION
+  // quiz selection helpers
   // ---------------------------
   private buildSelectedPool(): Question[] {
+    // pick a checkpoint-balanced set first
     const picked: Question[] = [];
 
     for (const cp of this.checkpoints) {
@@ -456,24 +497,24 @@ export class DiagnosticPageComponent {
 
     const trimmed = this.shuffle([...picked]).slice(0, MAX_QUESTIONS);
 
-    // guarantee at least some advanced questions exist
+    // make sure the final quiz still includes enough advanced coverage
     const enforced = this.enforceMinAdvanced(trimmed, this.MIN_ADVANCED_IN_QUIZ);
 
     return this.sortByCheckpointOrder(enforced);
   }
 
-
   private pickWithDifficultyPreference(pool: Question[], quota: number): Question[] {
     if (quota <= 0) return [];
     if (pool.length <= quota) return this.sortByDifficulty(pool);
 
+    // split the pool into difficulty buckets
     const d1 = this.shuffle(pool.filter((q) => q.difficulty === 1));
     const d2 = this.shuffle(pool.filter((q) => q.difficulty === 2));
     const d3 = this.shuffle(pool.filter((q) => q.difficulty === 3));
 
     const picked: Question[] = [];
 
-    // ladder order: 1 -> 2 -> 3 (repeat if needed)
+    // rotate through the difficulty buckets to keep coverage balanced
     const buckets: Question[][] = [d1, d2, d3];
     let idx = 0;
 
@@ -483,8 +524,7 @@ export class DiagnosticPageComponent {
       if (next) picked.push(next);
 
       idx++;
-
-      // if all buckets empty, stop
+      // stop once every bucket has been exhausted
       if (buckets.every((b) => b.length === 0)) break;
     }
 
@@ -492,10 +532,12 @@ export class DiagnosticPageComponent {
   }
 
   private sortByDifficulty(list: Question[]): Question[] {
+    // keep easier questions first inside a checkpoint
     return [...list].sort((a, b) => a.difficulty - b.difficulty);
   }
 
   private sortByCheckpointOrder(list: Question[]): Question[] {
+    // preserve the intended checkpoint progression order
     const orderIndex: Record<CheckointSafe, number> = {
       fundamentals: 0,
       loops: 1,
@@ -511,8 +553,9 @@ export class DiagnosticPageComponent {
       return a.difficulty - b.difficulty;
     });
   }
-
+  // Fisher-Yates shuffle implementation to randomize question order
   private shuffle<T>(arr: T[]): T[] {
+    // randomize selections to vary each run
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -520,104 +563,90 @@ export class DiagnosticPageComponent {
     }
     return a;
   }
-
-  skipQuestion() {
-    if (!this.currentQuestion) return;
-
-    // mark as answered, but incorrect
-    this.answers[this.currentQuestion.id] = 'SKIP';
-    this.selected = null;
-
-    // reuse the same flow as next(), but treat as incorrect
-    this.processAnswer(false);
-  }
-
+  // ensures the quiz includes a minimum number of advanced questions by swapping in from the full pool if needed
   private enforceMinAdvanced(picked: Question[], minAdvanced: number): Question[] {
-    const currentAdvanced = picked.filter(q => q.difficulty === 3).length;
+    const currentAdvanced = picked.filter((q) => q.difficulty === 3).length;
     if (currentAdvanced >= minAdvanced) return picked;
 
+    // work out how many advanced questions still need to be added
     const need = minAdvanced - currentAdvanced;
-    // find advanced questions in the full pool that weren't picked at all (to avoid removing any already picked advanced ones)
+
+    // add advanced questions that are not already in the selected set
     const advancedCandidates = this.all.filter(
-      q => q.difficulty === 3 && !picked.some(p => p.id === q.id)
+      (q) => q.difficulty === 3 && !picked.some((p) => p.id === q.id)
     );
 
     if (advancedCandidates.length === 0) return picked;
 
     const add = this.shuffle(advancedCandidates).slice(0, need);
 
-    // replace easiest questions first to keep length stable
+    // replace beginner questions first so the quiz length stays stable
     const replaceable = picked
       .map((q, idx) => ({ q, idx }))
-      .filter(x => x.q.difficulty === 1)
-      .map(x => x.idx);
+      .filter((x) => x.q.difficulty === 1)
+      .map((x) => x.idx);
 
     const out = [...picked];
 
     for (let i = 0; i < add.length; i++) {
       const idx = replaceable[i];
       if (idx === undefined) break;
+      // swap in an advanced question
       out[idx] = add[i];
     }
 
     return out;
   }
-  // counts how many advanced questions were attempted (answered or skipped), used to determine if we can classify someone as advanced
+
   private advancedAttemptedCount(): number {
+    // count advanced questions that the learner actually interacted with
     return this.selectedPool.filter(
-      q => q.difficulty === 3 && this.answers[q.id] !== undefined
+      (q) => q.difficulty === 3 && this.answers[q.id] !== undefined
     ).length;
   }
 
-  exitDiagnostic() {
-  if (this.step === 'QUIZ') {
-    const confirmed = window.confirm(
-      'Are you sure you want to leave the assessment? Your current progress will be lost.'
-    );
-    if (!confirmed) return;
+  // ---------------------------
+  // review helpers
+  // ---------------------------
+  private buildReviewItems(): ReviewItem[] {
+    // include only missed or skipped questions in the review
+    return this.selectedPool
+      .filter((q) => {
+        const given = this.answers[q.id];
+        return given !== undefined && given !== q.correctOption;
+      })
+      .map((q) => {
+        const given = this.answers[q.id];
+
+        return {
+          id: q.id,
+          prompt: q.prompt,
+          checkpoint: q.checkpoint,
+          difficulty: q.difficulty,
+          selectedAnswer: given ?? null,
+          correctAnswer: q.correctOption,
+          selectedText: this.getAnswerText(q, given),
+          correctText: this.getAnswerText(q, q.correctOption),
+          isSkipped: given === 'SKIP',
+        };
+      });
   }
 
-  this.router.navigate(['/dashboard']);
+  private getAnswerText(q: Question, answer: AnswerOption | 'SKIP' | undefined): string {
+    if (!answer) return 'No answer';
+    if (answer === 'SKIP') return 'Skipped';
+
+    // map the option key back to its visible text
+    const optionMap: Record<AnswerOption, string> = {
+      A: q.optionA,
+      B: q.optionB,
+      C: q.optionC,
+      D: q.optionD,
+    };
+
+    return `${answer}: ${optionMap[answer]}`;
+  }
 }
 
-private buildReviewItems(): ReviewItem[] {
-  return this.selectedPool
-    .filter((q) => {
-      const given = this.answers[q.id];
-      return given !== undefined && given !== q.correctOption;
-    })
-    .map((q) => {
-      const given = this.answers[q.id];
-
-      return {
-        id: q.id,
-        prompt: q.prompt,
-        checkpoint: q.checkpoint,
-        difficulty: q.difficulty,
-        selectedAnswer: given ?? null,
-        correctAnswer: q.correctOption,
-        selectedText: this.getAnswerText(q, given),
-        correctText: this.getAnswerText(q, q.correctOption),
-        isSkipped: given === 'SKIP',
-      };
-    });
-}
-
-private getAnswerText(q: Question, answer: AnswerOption | 'SKIP' | undefined): string {
-  if (!answer) return 'No answer';
-  if (answer === 'SKIP') return 'Skipped';
-
-  const optionMap: Record<AnswerOption, string> = {
-    A: q.optionA,
-    B: q.optionB,
-    C: q.optionC,
-    D: q.optionD,
-  };
-
-  return `${answer}: ${optionMap[answer]}`;
-}
-
-}
-
-// TS helper (narrowing)
+// helper type for checkpoint ordering
 type CheckointSafe = 'fundamentals' | 'loops' | 'arrays' | 'methods' | 'oop';

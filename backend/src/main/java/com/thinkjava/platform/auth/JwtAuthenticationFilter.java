@@ -24,7 +24,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     this.jwt = jwt;
     this.users = users;
   }
-
+  // filter method that intercepts incoming HTTP requests, checks for a Bearer token in the Authorization header,
+  // validates the token and sets the authentication in the SecurityContext if valid, allowing the request to proceed
   @Override
   protected void doFilterInternal(HttpServletRequest request,
                                   HttpServletResponse response,
@@ -42,11 +43,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
           existing != null
               && existing.isAuthenticated()
               && !(existing instanceof org.springframework.security.authentication.AnonymousAuthenticationToken);
-
+      // If we don't already have a real authenticated user, 
+      // try to authenticate with the JWT token
       if (!alreadyHasRealUser) {
         try {
           String email = jwt.validateAndGetSubject(token);
-
+          // If the token is valid, load the user details and set the authentication in the SecurityContext
           users.findByEmail(email).ifPresent(user -> {
             UsernamePasswordAuthenticationToken authToken =
                 new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
