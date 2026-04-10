@@ -57,7 +57,7 @@ What makes the project distinctive is the combination of curriculum logic, progr
 - Quiz submission and scoring with pass/fail outcomes and next-lesson recommendation.
 - Dashboard summary showing progress, quiz averages, current focus, recent activity, and checkpoint mastery.
 - AI tutor that answers questions using retrieved sections from the current lesson rather than broad unrestricted generation.
-- Automated testing across frontend unit tests, backend tests, and Playwright user-flow coverage.
+- Automated testing across frontend unit tests and backend tests.
 
 ## Architecture
 
