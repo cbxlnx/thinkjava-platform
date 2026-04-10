@@ -25,6 +25,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.thinkjava.platform.learn.section.LessonSemanticSearchService;
+import com.thinkjava.platform.learn.section.LessonSectionEmbeddingService;
 
 import java.time.Instant;
 import java.util.*;
@@ -51,6 +52,8 @@ class LearnServiceTest {
         private DiagnosticResultRepository diagnosticRepository;
         @Mock
         private LessonSemanticSearchService semanticSearchService;
+        @Mock
+        private LessonSectionEmbeddingService embeddingService;
         private LearnService learnService;
         private User user;
 
@@ -63,7 +66,8 @@ class LearnServiceTest {
                                 progressRepository,
                                 masteryRepository,
                                 diagnosticRepository,
-                                semanticSearchService);
+                                semanticSearchService,
+                                embeddingService);
 
                 user = new User();
                 user.setId(1L);
@@ -675,7 +679,7 @@ class LearnServiceTest {
                 assertEquals(1.0, response.updatedCheckpointMastery(), 0.0001,
                                 "Checkpoint mastery should reach 100% when all lessons in the checkpoint are completed");
         }
-
+        // If all checkpoint masteries are at 100%, the user should be classified as advanced and all lessons should be unlocked
         @Test
         void getAllLessons_whenAllCheckpointMasteryIsOneHundredPercent_shouldShowAdvancedAndUnlockEverything() {
                 Lesson fundamentals = lesson("Variables", Checkpoint.fundamentals, 1, 1);

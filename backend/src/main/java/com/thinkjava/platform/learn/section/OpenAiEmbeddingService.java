@@ -57,9 +57,7 @@ public class OpenAiEmbeddingService {
             List<String> stringValues = values.stream() 
                     .map(Object::toString)
                     .collect(Collectors.toList());
-            
-            System.out.println("Embedding key prefix: " + apiKey.substring(0, 15));
-
+                        
             return "[" + String.join(",", stringValues) + "]";
         } catch (Exception e) {
             throw new RuntimeException("Failed to create embedding", e);

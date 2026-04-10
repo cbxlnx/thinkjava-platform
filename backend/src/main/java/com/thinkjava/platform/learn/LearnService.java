@@ -24,6 +24,7 @@ import com.thinkjava.platform.learn.quiz.LessonQuizQuestion;
 import com.thinkjava.platform.learn.quiz.LessonQuizQuestionRepository;
 import com.thinkjava.platform.learn.section.LessonBlock;
 import com.thinkjava.platform.learn.section.LessonBlockRepository;
+import com.thinkjava.platform.learn.section.LessonSectionEmbeddingService;
 import com.thinkjava.platform.user.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ public class LearnService {
     private final LessonProgressRepository progressRepository;
     private final MasteryRepository masteryRepository;
     private final DiagnosticResultRepository diagnosticRepository;
+    private final LessonSectionEmbeddingService lessonSectionEmbeddingService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -56,13 +58,15 @@ public class LearnService {
             LessonProgressRepository progressRepository,
             MasteryRepository masteryRepository,
             DiagnosticResultRepository diagnosticRepository,
-            LessonSemanticSearchService semanticSearchService) {
+            LessonSemanticSearchService semanticSearchService,
+            LessonSectionEmbeddingService lessonSectionEmbeddingService) {
         this.lessonRepository = lessonRepository;
         this.blockRepository = blockRepository;
         this.quizRepository = quizRepository;
         this.progressRepository = progressRepository;
         this.masteryRepository = masteryRepository;
         this.diagnosticRepository = diagnosticRepository;
+        this.lessonSectionEmbeddingService = lessonSectionEmbeddingService;
     }
 
     // ---------------------------------------------------------
@@ -161,6 +165,7 @@ public class LearnService {
 
         // load blocks ordered by section_order (mapped as orderIndex in LessonBlock)
         List<LessonBlock> blocks = blockRepository.findByLessonIdOrderByOrderIndexAsc(lessonId);
+        ensureLessonEmbedded(lessonId, blocks);
         List<LessonResponse.BlockDto> blockDtos = blocks.stream()
                 .map(b -> new LessonResponse.BlockDto(
                         b.getOrderIndex(),
@@ -192,6 +197,17 @@ public class LearnService {
                         mapLevelTag(lesson.getDifficulty())),
                 blockDtos,
                 new LessonResponse.QuizDto(quizQuestions));
+    }
+
+    // lazily generate embeddings the first time a lesson is opened so tutor retrieval
+    // works without requiring a separate manual indexing step.
+    private void ensureLessonEmbedded(UUID lessonId, List<LessonBlock> blocks) {
+        boolean needsEmbedding = blocks.stream()
+                .anyMatch(block -> block.getEmbedding() == null || block.getEmbedding().isBlank());
+
+        if (needsEmbedding) {
+            lessonSectionEmbeddingService.embedAllSectionsForLesson(lessonId);
+        }
     }
 
     // helper to mark lesson as in_progress if not already, and update last seen
